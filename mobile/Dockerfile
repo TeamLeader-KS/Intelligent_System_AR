@@ -14,7 +14,9 @@ WORKDIR /workspace
 COPY . .
 RUN --mount=type=cache,id=industrial-vision-gradle,target=/root/.gradle,sharing=locked \
     --mount=type=cache,id=industrial-vision-android-signing,target=/root/.android,sharing=locked \
-    sh gradlew :app:assembleDebug --no-daemon --max-workers=4 \
+
+    --mount=type=cache,id=industrial-vision-project,target=/workspace/.gradle,sharing=locked \
+    sh gradlew :app:assembleDebug --no-daemon --build-cache --max-workers=4 \
     && "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify app/build/outputs/apk/debug/app-debug.apk
 FROM scratch AS artifact
 COPY --from=builder /workspace/app/build/outputs/apk/debug/app-debug.apk /app-debug.apk
