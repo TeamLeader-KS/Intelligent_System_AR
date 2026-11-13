@@ -46,7 +46,20 @@ data class ServerInspectionDto(
     val defect: String,
     val reason: String,
     val recommendation: String,
-    val detections: List<ServerFindingDto>?
+    val detections: List<ServerFindingDto>?,
+    @SerializedName("component_context") val componentContext: List<VisionComponentContextDto>? = null
+)
+data class VisionComponentContextDto(
+    @SerializedName("detection_index") val detectionIndex: Int,
+    @SerializedName("component_id") val componentId: Int?,
+    val association: String,
+    @SerializedName("binding_confirmed") val bindingConfirmed: Boolean,
+    @SerializedName("as_of") val asOf: String,
+    val resource: ResourceDto?,
+    @SerializedName("operating_hours") val operatingHours: Double?,
+    @SerializedName("last_serviced_at") val lastServicedAt: String?,
+    @SerializedName("attention_reasons") val attentionReasons: List<String>,
+    val limitations: String
 )
 data class ComponentWorkRequest(
     val action: String,

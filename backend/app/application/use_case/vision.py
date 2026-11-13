@@ -1,4 +1,4 @@
-from datetime import timezone
+from datetime import datetime, timezone
 import hashlib
 import json
 from app.application.contracts import Account
@@ -9,7 +9,7 @@ from app.application.ports.analysis import ImageDecoder
 from app.application.use_case.field_service import FieldServiceUseCase
 from app.application.use_case.inspections import InspectionsUseCase
 from app.domain.errors import AnalysisError
-from app.domain.server_vision import validate_vision_result
+from app.domain.server_vision import validate_vision_result, vision_component_context
 
 
 class VisionInspectionUseCase:
@@ -21,6 +21,7 @@ class VisionInspectionUseCase:
         return self.model.status() if self.model else {"state": "DISABLED", "model": None, "digest": None}
 
     def create(self, *, values: dict, content: bytes, key: str, actor: Account) -> InspectionResponse:
+        context_as_of = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
         card = self.field_service.card(values["equipment_id"], actor)
         component_id = values.get("component_id")
         if component_id is not None and not any(c["id"] == component_id for c in card["components"]):
@@ -58,6 +59,7 @@ class VisionInspectionUseCase:
                     "photo_id": record.id, "image": {"width": image.width, "height": image.height},
                     "analysis_source": "MODEL", "analysis_location": "LOCAL_SERVER", "model_version": observation["model_version"],
                     "latency_ms": observation.get("latency_ms"), "diagnostics": [], "visual_checks": [],
+                    "component_context": vision_component_context(result["detections"], card["components"], context_as_of),
                     "comment": "", "diagnostic_limitations": result["limitations"]}
             if not self.records.complete(record.id, body, image.media_type, hashlib.sha256(image.content).hexdigest()):
                 raise AnalysisError("ANALYSIS_INTERRUPTED", "Не удалось завершить запись анализа")

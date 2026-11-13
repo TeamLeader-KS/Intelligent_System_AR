@@ -255,3 +255,52 @@ def test_validator_rejects_model_suggested_component_outside_card():
             {"component_id": 999, "component_type": "pump", "code": "leak", "description": "След жидкости", "box": [0, 0, 1000, 1000]}
         ]}, [])
     assert error.value.code == "VISION_INVALID_RESPONSE"
+
+
+def test_visual_observation_stays_same_while_card_context_changes_and_replay_is_immutable(client, vision_case, factory):
+    h = headers(vision_case)
+    first = send_vision(client, vision_case, request_headers=h)
+    assert first.status_code == 201, first.text
+    original = first.json()
+    before = original["component_context"][0]
+    assert before["component_id"] == vision_case["component"]["id"]
+    assert before["association"] == "MODEL_PROPOSED" and before["binding_confirmed"] is False
+    assert before["resource"]["estimates"]["hours"]["remaining"] == 100
+    assert before["resource"]["service_due"] is True
+    assert len(before["attention_reasons"]) == 2
+    now = datetime.now(timezone.utc)
+    with factory.begin() as db:
+        component = db.get(EquipmentComponent, vision_case["component"]["id"])
+        component.operating_hours = 950
+        component.last_service_hours = 950
+        component.last_serviced_at = now
+        component.lifetime_hours = 2000
+    replay = send_vision(client, vision_case, request_headers=h)
+    assert replay.status_code == 201 and replay.json() == original
+    assert len(vision_case["model"].calls) == 1
+    fresh = send_vision(client, vision_case)
+    assert fresh.status_code == 201, fresh.text
+    result = fresh.json()
+    assert result["detections"] == original["detections"]
+    assert result["box"] == original["box"] and result["status"] == original["status"]
+    assert result["diagnostics"] == []
+    after = result["component_context"][0]
+    assert after["resource"]["estimates"]["hours"]["remaining"] == 1050
+    assert after["resource"]["service_due"] is False and after["attention_reasons"] == []
+    assert after["last_serviced_at"] is not None
+    assert result["inspection_id"] != original["inspection_id"]
+    fetched = client.get(f"/api/v1/inspections/{original['inspection_id']}", headers=h)
+    assert fetched.json() == original
+
+
+def test_manually_selected_component_does_not_resolve_unassigned_visual_finding(client, vision_case):
+    vision_case["model"].raw["detections"][0]["component_id"] = None
+    response = send_vision(client, vision_case)
+    assert response.status_code == 201, response.text
+    result = response.json()
+    assert result["component_id"] == vision_case["component"]["id"]
+    context = result["component_context"][0]
+    assert context["association"] == "UNRESOLVED"
+    assert context["component_id"] is None and context["binding_confirmed"] is False
+    assert context["resource"] is None and context["operating_hours"] is None
+    assert context["last_serviced_at"] is None and context["attention_reasons"] == []

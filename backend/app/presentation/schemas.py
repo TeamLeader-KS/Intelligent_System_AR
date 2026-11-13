@@ -36,7 +36,7 @@ class NewDefect(Named):
     recommendation: str = Field(min_length=1, max_length=4000)
 
 
-from datetime import datetime
+from datetime import date, datetime
 class AccountOut(BaseModel):
     id:int
     login:str
@@ -113,6 +113,28 @@ class PreviewOut(BaseModel):
     confidence: None
 
 
+class VisionComponentContextOut(BaseModel):
+    detection_index: int = Field(ge=0)
+    component_id: int | None
+    association: Literal["MODEL_PROPOSED", "UNRESOLVED"]
+    binding_confirmed: Literal[False]
+    context_source: Literal["DIGITAL_CARD"]
+    as_of: datetime
+    name: str | None
+    model: str | None
+    resource: dict | None
+    installed_on: date | None
+    operating_hours: float | None
+    operating_cycles: int | None
+    last_serviced_at: datetime | None
+    last_service_hours: float | None
+    service_interval_hours: float | None
+    runtime_state: Literal["RUNNING", "STOPPED"] | None
+    revision: int | None
+    attention_reasons: list[str]
+    limitations: str
+
+
 class InspectionOut(PreviewOut):
     status: Literal["OK", "WARNING", "CRITICAL", "UNKNOWN"]
     color: Literal["GREEN", "ORANGE", "RED", "GRAY"]
@@ -139,6 +161,7 @@ class InspectionOut(PreviewOut):
     comment: str | None = None
     diagnostics: list[dict] | None = None
     component_resource: dict | None = None
+    component_context: list[VisionComponentContextOut] | None = None
     diagnostic_limitations: str | None = None
     ignored_readings: list[str] | None = None
     latency_ms: int | None = None

@@ -1,0 +1,51 @@
+{
+  "status": "EXPERIMENT_COMPLETED_NOT_RECOMMENDED_FOR_PRODUCTION",
+  "weights_changed": false,
+  "production_code_changed": false,
+  "real_inference_calls": 3,
+  "new_training": false,
+  "accuracy_metrics": null,
+  "independent_holdout": false,
+  "model_digest": "afc393e3572c07db0bc84aa460d928a16c75f3fbb9ca9e0dccc4fbd2dafb573e",
+  "prompt_template_sha256": "8828141e92762570782791582ce97f672f0486988afe79d9ed47e0166df5f354",
+  "model_tag": "qwen3-vl:2b-instruct",
+  "observations": [
+    {
+      "case": "normal_ksb",
+      "source_sha256": "f142906db310a07f71e956e6fe036e0eef05bad13dfab623357177e17ed72ac4",
+      "wall_ms": 78835,
+      "server_latency_ms": 78799,
+      "error": null,
+      "findings": "corrosion + guard_missing",
+      "review": "The corrosion finding is semantically contradictory: code corrosion/type oil_sight_glass but description says no visible oil sight glass. Finding boxes repeat motor box. No healthy/unsafe status can be inferred.",
+      "human_ground_truth": null
+    },
+    {
+      "case": "exposed_coupling_synthetic",
+      "source_sha256": "481805c1dc8c9bade8fc0e86fec58ab5d6c798034e50271d167b26315271a0c5",
+      "wall_ms": 47856,
+      "server_latency_ms": 47788,
+      "error": null,
+      "findings": "leak + loose_bolt, guard_missing absent",
+      "review": "Intended exposed coupling observation missed. Reported grease drip and slightly loose bolt lack clear supporting visual evidence in this generated development example. Torque/looseness cannot be confirmed from RGB.",
+      "human_ground_truth": null
+    },
+    {
+      "case": "oil_below_min_synthetic",
+      "source_sha256": "d66b1cc8b1e81ce4d881990f793b77d695f95a8708658831713c66491a3af2f4",
+      "wall_ms": 45869,
+      "server_latency_ms": 45788,
+      "error": null,
+      "findings": "oil_abnormal + corrosion",
+      "review": "Text identifies oil below visible MIN and localizes sight glass reasonably on visual inspection, but also emits unsupported whole-image corrosion with component_type oil_sight_glass. Partial useful observation is not a reliable overall diagnosis.",
+      "human_ground_truth": null
+    }
+  ],
+  "conclusion": "Prompt constraints did not reliably prevent unsupported findings or ensure desired guard/oil behavior. Valid JSON/schema does not establish semantic correctness. Do not replace the production prompt on this evidence. Prefer reviewed region-level data and specialist detection models; keep manual confirmation and unknown outcomes.",
+  "experiment_limitations": [
+    "Three familiar development examples, two synthetic; no human-approved ground truth and no statistical accuracy claim.",
+    "No paired baseline run within this experiment. Prior errors are context, not a measured comparison.",
+    "Source PNG files for cases2/3 were replaced by parent with WEBP during first inference. Cases2/3 use pinned deployed WEBP; old PNG hashes recorded in cases.json. Interrupted file lookup made no extra inference call.",
+    "Components empty, so component-ID association not evaluated. CPU timings are observations in this running environment, not phone latency estimates."
+  ]
+}

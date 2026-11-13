@@ -46,7 +46,8 @@ data class ResourceDto(
     val status: String,
     val estimates: Map<String, ResourceMeasureDto>,
     val limitations: String,
-    @SerializedName("service_remaining_hours") val serviceRemainingHours: Double?
+    @SerializedName("service_remaining_hours") val serviceRemainingHours: Double?,
+    @SerializedName("service_due") val serviceDue: Boolean? = null
 )
 
 data class ResourceMeasureDto(val norm: Double?, val used: Double?, val remaining: Double?)

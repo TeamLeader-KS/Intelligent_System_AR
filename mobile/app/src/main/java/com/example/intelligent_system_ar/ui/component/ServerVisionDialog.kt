@@ -59,6 +59,19 @@ fun ServerVisionDialog(viewModel: MainViewModel,onDismiss: () -> Unit,onOpenComp
                     Text("${index+1}. ${item.componentName ?: "Узел не определён"}",style=MaterialTheme.typography.titleMedium)
                     Text(item.description)
                     Text("Уверенность модели не откалибрована; вывод требует проверки.",style=MaterialTheme.typography.bodySmall)
+                    result.componentContext?.firstOrNull { it.detectionIndex==index }?.let { facts ->
+                        Text("Данные карточки на ${facts.asOf}",style=MaterialTheme.typography.titleSmall)
+                        Text("Привязка узла предложена ИИ и не подтверждена.",style=MaterialTheme.typography.bodySmall)
+                        facts.resource?.let { resource ->
+                            Text("Нормативный ресурс: ${resourceTitle(resource.status)}")
+                            resource.estimates["hours"]?.remaining?.let { Text("Остаток по наработке: $it ч") }
+                            resource.serviceRemainingHours?.let { Text("До обслуживания: $it ч") }
+                        }
+                        Text("Наработка: ${facts.operatingHours?.let { "$it ч" } ?: "не указана"}")
+                        Text("Последнее обслуживание: ${facts.lastServicedAt ?: "не указано"}")
+                        facts.attentionReasons.forEach { Text(it) }
+                        Text(facts.limitations,style=MaterialTheme.typography.bodySmall)
+                    }
                     val componentId=item.componentId
                     val valid=viewModel.card?.id==result.equipmentId && viewModel.card?.components?.any { it.id==componentId }==true
                     if(componentId!=null && valid) {

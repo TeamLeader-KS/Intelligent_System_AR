@@ -24,6 +24,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import com.example.intelligent_system_ar.ui.MainViewModel
+import com.example.intelligent_system_ar.data.model.componentAttention
 import com.example.intelligent_system_ar.ui.component.EquipmentDialog
 import com.example.intelligent_system_ar.ui.component.MainTopBar
 import com.example.intelligent_system_ar.ui.component.ComponentDetailDialog
@@ -68,6 +69,8 @@ fun CameraScreen(viewModel: MainViewModel) {
     var showManualChecks by remember { mutableStateOf(false) }
     var confirmDiscardWork by remember { mutableStateOf(false) }
     var showServerVision by remember { mutableStateOf(false) }
+    var showAttention by remember { mutableStateOf(false) }
+    val attention = componentAttention(viewModel.card?.components.orEmpty())
     val panelHeight=(LocalConfiguration.current.screenHeightDp*0.52f).dp
     LaunchedEffect(status.error) { if(status.error) capturing=false }
     LaunchedEffect(viewModel.lastVisionInspection?.inspectionId) { if(viewModel.lastVisionInspection!=null) showServerVision=true }
@@ -84,7 +87,7 @@ fun CameraScreen(viewModel: MainViewModel) {
                 camera.bind(lifecycleOwner)
                 onDispose { cameraView=null; camera.release() }
             }
-            AndroidView(factory={camera}, update={it.setAnalyzing(analyzing && !showEquipment && !showComponent && !showManualChecks && !showServerVision && !confirmDiscardWork && qrCandidate==null && nameplateCandidates==null)},
+            AndroidView(factory={camera}, update={it.setAnalyzing(analyzing && !showEquipment && !showComponent && !showAttention && !showManualChecks && !showServerVision && !confirmDiscardWork && qrCandidate==null && nameplateCandidates==null)},
                 modifier=Modifier.fillMaxSize())
         } else {
             Column(Modifier.align(Alignment.Center).padding(24.dp), horizontalAlignment=Alignment.CenterHorizontally) {
@@ -117,6 +120,9 @@ fun CameraScreen(viewModel: MainViewModel) {
                 }
                 viewModel.card?.let { equipment ->
                     Text(equipment.name,color=ArTextPrimary,style=MaterialTheme.typography.bodySmall)
+                    OutlinedButton(onClick={showAttention=true},modifier=Modifier.fillMaxWidth()) {
+                        Text("Требуют внимания: ${attention.size}")
+                    }
                     OutlinedButton(onClick={
                         val componentId=viewModel.selectedComponentId
                         capturing=cameraView?.captureNextFrame { snapshot ->
@@ -172,6 +178,19 @@ fun CameraScreen(viewModel: MainViewModel) {
     }
     if (showEquipment) EquipmentDialog(viewModel,onDismiss={showEquipment=false},onComponentOpen={showEquipment=false;showComponent=true})
     if (showComponent) ComponentDetailDialog(viewModel,onDismiss={showComponent=false})
+    if (showAttention) AlertDialog(onDismissRequest={showAttention=false},title={Text("Узлы требуют внимания")},text={
+        Column(Modifier.heightIn(max=400.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+            Text("Причины по цифровой карточке, не диагноз ИИ. Отсутствие узла в списке не подтверждает исправность.")
+            if(attention.isEmpty()) Text("По имеющимся нормативам причин внимания нет. Можно выбрать любой узел для осмотра.")
+            attention.forEach { item ->
+                Text(item.name,style=MaterialTheme.typography.titleSmall)
+                item.reasons.forEach { Text("• $it") }
+                Button(onClick={viewModel.selectComponent(item.componentId);showAttention=false;analyzing=true},modifier=Modifier.fillMaxWidth()) {
+                    Text("Навести камеру на узел")
+                }
+            }
+        }
+    },confirmButton={TextButton(onClick={showAttention=false}) { Text("Закрыть") }})
     if(showServerVision) ServerVisionDialog(viewModel,onDismiss={showServerVision=false},onOpenComponent={showServerVision=false;showComponent=true})
     if(showManualChecks) {
         val checks=linkedMapOf("SEAL_LEAK" to "Утечка у уплотнения", "FRAME_CORROSION" to "Коррозия фундаментной рамы",

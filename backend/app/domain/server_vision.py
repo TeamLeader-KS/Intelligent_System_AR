@@ -50,3 +50,37 @@ def validate_vision_result(raw: dict, components: list[dict]) -> dict:
             "box": main["box"] if main else None, "reason": raw["summary"][:1600],
             "recommendation": main["recommendation"] if main else "Уточнить кадр и сверить узлы с карточкой. Отсутствие находок не подтверждает исправность.",
             "limitations": "Предварительные гипотезы универсальной визуальной модели. Тип и привязка узла требуют подтверждения. Внутренний износ, кавитация, фактическая затяжка болтов и физические параметры не определяются по одной RGB-фотографии."}
+
+
+def vision_component_context(detections: list[dict], components: list[dict], as_of: str) -> list[dict]:
+    """Snapshot card facts alongside model proposals; never confirm a visual association."""
+    from copy import deepcopy
+
+    by_id = {component["id"]: component for component in components}
+    contexts = []
+    fields = ("installed_on", "operating_hours", "operating_cycles", "last_serviced_at", "last_service_hours",
+              "service_interval_hours", "runtime_state", "revision")
+    for index, detection in enumerate(detections):
+        component = by_id.get(detection.get("component_id"))
+        resource = deepcopy(component.get("resource")) if component else None
+        reasons = []
+        if resource:
+            if resource.get("status") == "DUE":
+                reasons.append("Достигнут нормативный ресурс по доступным данным карточки.")
+            elif resource.get("status") == "APPROACHING":
+                reasons.append("Осталось не более 10% указанного нормативного ресурса.")
+            if resource.get("service_due") is True:
+                reasons.append("Достигнут указанный в карточке интервал обслуживания.")
+            if resource.get("status") == "INSUFFICIENT_DATA":
+                reasons.append("Недостаточно исходных данных для расчёта остаточного ресурса.")
+        contexts.append({"detection_index": index, "component_id": component["id"] if component else None,
+                         "association": "MODEL_PROPOSED" if component else "UNRESOLVED",
+                         "binding_confirmed": False, "context_source": "DIGITAL_CARD", "as_of": as_of,
+                         "name": component["name"] if component else None,
+                         "model": component.get("model") if component else None, "resource": resource,
+                         **{field: deepcopy(component.get(field)) if component else None for field in fields},
+                         "attention_reasons": reasons,
+                         "limitations": ("Паспортные данные и нормативный расчёт из карточки, не показания модели. "
+                                          "Привязка предложена моделью и требует проверки; внутренние неисправности не подтверждены.")
+                                         if component else "Точная привязка к узлу не установлена; данные вручную выбранного узла не подставлены."})
+    return contexts

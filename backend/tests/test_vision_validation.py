@@ -93,3 +93,35 @@ def test_xlsx_preserves_server_node_description_association_and_recommendation()
         assert rows["Предварительная рекомендация"] == finding["recommendation"]
     finally:
         workbook.close()
+
+
+def test_card_context_preserves_unknown_values_and_never_confirms_binding():
+    from copy import deepcopy
+    from app.domain.server_vision import vision_component_context
+    from app.presentation.schemas import VisionComponentContextOut
+
+    detections = [{"component_id": 7, "association": "MODEL_PROPOSED", "box": [0.1, 0.2, 0.9, 0.8]},
+                  {"component_id": None, "association": "UNRESOLVED", "box": None}]
+    components = [{"id": 7, "name": "Насос", "model": "Паспортная модель", "operating_hours": None,
+                   "last_serviced_at": None, "resource": {"status": "INSUFFICIENT_DATA", "service_due": None,
+                   "estimates": {"hours": {"norm": 11000, "used": None, "remaining": None}}}}]
+    original = deepcopy((detections, components))
+    contexts = vision_component_context(detections, components, "2026-11-13T12:00:00Z")
+    assert (detections, components) == original
+    assert contexts[0]["resource"] == components[0]["resource"]
+    assert contexts[0]["operating_hours"] is None and contexts[0]["binding_confirmed"] is False
+    assert "Недостаточно" in contexts[0]["attention_reasons"][0]
+    assert contexts[1]["component_id"] is None and contexts[1]["resource"] is None
+    assert contexts[1]["last_serviced_at"] is None and contexts[1]["association"] == "UNRESOLVED"
+    for context in contexts:
+        VisionComponentContextOut.model_validate(context)
+    contexts[0]["resource"]["estimates"]["hours"]["norm"] = 1
+    assert components[0]["resource"]["estimates"]["hours"]["norm"] == 11000
+
+
+@pytest.mark.parametrize("status,service_due,count", [("DUE", True, 2), ("APPROACHING", False, 1), ("WITHIN_NORM", False, 0)])
+def test_card_attention_reasons_follow_only_resource_state(status, service_due, count):
+    from app.domain.server_vision import vision_component_context
+    result = vision_component_context([{"component_id": 7}], [{"id": 7, "name": "Насос",
+        "resource": {"status": status, "service_due": service_due}}], "2026-11-13T12:00:00Z")
+    assert len(result[0]["attention_reasons"]) == count

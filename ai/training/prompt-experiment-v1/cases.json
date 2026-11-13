@@ -1,0 +1,27 @@
+{
+  "status": "DEVELOPMENT_PROBES_NOT_HELD_OUT_ACCURACY_TEST",
+  "max_calls": 3,
+  "context": {
+    "components": []
+  },
+  "cases": [
+    {
+      "id": "normal_ksb",
+      "source_file": "ai/demo/pumps/ksb-etanorm.jpg",
+      "sha256": "f142906db310a07f71e956e6fe036e0eef05bad13dfab623357177e17ed72ac4"
+    },
+    {
+      "id": "exposed_coupling_synthetic",
+      "source_file": "ai/demo/pumps/guard-missing-demo.webp",
+      "sha256": "481805c1dc8c9bade8fc0e86fec58ab5d6c798034e50271d167b26315271a0c5",
+      "original_png_sha256_before_parallel_asset_conversion": "033df3ce8826390019ec020b4341fd5d9dd49976c8321399059e312f20eeb55f"
+    },
+    {
+      "id": "oil_below_min_synthetic",
+      "source_file": "ai/demo/pumps/oil-low-demo.webp",
+      "sha256": "d66b1cc8b1e81ce4d881990f793b77d695f95a8708658831713c66491a3af2f4",
+      "original_png_sha256_before_parallel_asset_conversion": "86c6fb09b67378e543b7f45ffe680ff642c0e25330f926430c8d7e200bb369df"
+    }
+  ],
+  "asset_note": "During first call source assets were converted from PNG to WEBP by parent. Calls 2/3 use deployed WEBP; original PNG SHA retained for provenance. No extra model request was made on failed path lookup."
+}

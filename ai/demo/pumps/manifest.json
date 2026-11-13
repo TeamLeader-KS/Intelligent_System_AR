@@ -79,7 +79,7 @@
     {
       "id": "rusty-pump-demo",
       "name": "ДЕМО: насос с видимой коррозией",
-      "file": "rust-pump-full.png",
+      "file": "rust-pump-full.webp",
       "description": "Синтетическое изображение насоса с видимыми следами коррозии. Для проверки живой камеры, не эталон точности и не реальный паспорт оборудования.",
       "equipment_type": "centrifugal-demo",
       "source_url": "https://disk.yandex.ru/d/CaiCoW791_PlJA",
@@ -88,19 +88,32 @@
       "license_url": "https://disk.yandex.ru/d/CaiCoW791_PlJA",
       "synthetic": true,
       "real": false,
-      "bytes": 6441117,
-      "sha256": "567fa79a755b5934a5b4d32654818b4ba7bb91930f4512bcc3dbddae183677cc",
+      "bytes": 4035130,
+      "sha256": "f59c4e6f3aade1db512f865bb14e76a0f443c916fd157bc9ad105ca68b64c72d",
       "expected_observations": [
         "ДЕМО: видимая коррозия"
       ],
       "inventory_number": "pump_demo_004",
       "serial_number": "DEMO-PUMP-2026-004",
-      "qr_file": "rusty-pump-demo-qr.svg"
+      "qr_file": "rusty-pump-demo-qr.svg",
+      "source_original_file": "rust-pump-full.png",
+      "source_original_sha256": "567fa79a755b5934a5b4d32654818b4ba7bb91930f4512bcc3dbddae183677cc",
+      "source_original_bytes": 6441117,
+      "source_original_format": "PNG",
+      "source_original_changes": "Исходный PNG до оптимизации формата.",
+      "width": 2704,
+      "height": 1536,
+      "changes": "Перекодировано в WebP lossless exact; размеры и декодированные RGBA-пиксели побайтно совпадают с исходным PNG. Водяные знаки сохранены; исходный файловый SHA записан отдельно.",
+      "lossless_encoding": {
+        "encoder": "cwebp -lossless -exact -m 6 -q 100 -metadata all",
+        "decoded_rgba_sha256": "fa2643cd8d2ac6957eaef34f965ebf38bb67f5bb882eab6de1ef5bcf6d0a3720",
+        "decoded_pixels_identical": true
+      }
     },
     {
       "id": "corrosion-closeup",
       "name": "ДЕМО: коррозия крупным планом",
-      "file": "rust-pump-closeup.png",
+      "file": "rust-pump-closeup.webp",
       "description": "Синтетический крупный план поверхности насоса с видимой коррозией. Это тот же демонстрационный сюжет, не независимая тестовая выборка.",
       "equipment_type": "centrifugal-demo",
       "source_url": "https://disk.yandex.ru/d/CaiCoW791_PlJA",
@@ -109,19 +122,32 @@
       "license_url": "https://disk.yandex.ru/d/CaiCoW791_PlJA",
       "synthetic": true,
       "real": false,
-      "bytes": 1311597,
-      "sha256": "39115b5bc223370c2090ca873f0dfe815adee220dd1e8c64c255ccd68cb1baa8",
+      "bytes": 920564,
+      "sha256": "9b4d9d4ee10ff1e7bda35842ef7354bb54cdc9d572efa938653fd274f781746a",
       "expected_observations": [
         "ДЕМО: видимая коррозия"
       ],
       "inventory_number": "pump_demo_005",
       "serial_number": "DEMO-PUMP-2026-005",
-      "qr_file": "corrosion-closeup-qr.svg"
+      "qr_file": "corrosion-closeup-qr.svg",
+      "source_original_file": "rust-pump-closeup.png",
+      "source_original_sha256": "39115b5bc223370c2090ca873f0dfe815adee220dd1e8c64c255ccd68cb1baa8",
+      "source_original_bytes": 1311597,
+      "source_original_format": "PNG",
+      "source_original_changes": "Исходный PNG до оптимизации формата.",
+      "width": 1120,
+      "height": 850,
+      "changes": "Перекодировано в WebP lossless exact; размеры и декодированные RGBA-пиксели побайтно совпадают с исходным PNG. Водяные знаки сохранены; исходный файловый SHA записан отдельно.",
+      "lossless_encoding": {
+        "encoder": "cwebp -lossless -exact -m 6 -q 100 -metadata all",
+        "decoded_rgba_sha256": "c915eb9e8e2523413ca7dfa7f91164f6782d9515449e4ea1d97cff2cee222a8d",
+        "decoded_pixels_identical": true
+      }
     },
     {
       "id": "seal-leak-demo",
       "name": "ДЕМО: жидкость у уплотнения",
-      "file": "seal-leak-demo.png",
+      "file": "seal-leak-demo.webp",
       "description": "Крупный план узла центробежного насоса: видны капли и потёки жидкости возле вала и уплотнения. Синтетический материал организаторов; тип жидкости, внутренний износ и перегрев по картинке не установлены. Это крупный план отдельного узла, электродвигатель не показан.",
       "equipment_type": "centrifugal-node-demo",
       "source_url": "https://disk.yandex.ru/d/CaiCoW791_PlJA",
@@ -134,20 +160,30 @@
       "real": false,
       "width": 2528,
       "height": 1696,
-      "bytes": 6297627,
-      "sha256": "6a9d2157b9a15b96874dc136550e292b15d5ebf223fcd94e907fff57c1d92689",
-      "changes": "Оригинал организаторов без изменений; водяные знаки сохранены.",
+      "bytes": 3793522,
+      "sha256": "5e853683b908883c20b738031937bb73c1bbf4601ccb93e1791e0a02c3b576f0",
+      "changes": "Перекодировано в WebP lossless exact; размеры и декодированные RGBA-пиксели побайтно совпадают с исходным PNG. Водяные знаки сохранены; исходный файловый SHA записан отдельно.",
       "inventory_number": "pump_demo_006",
       "serial_number": "DEMO-PUMP-2026-006",
       "qr_file": "seal-leak-demo-qr.svg",
       "expected_observations": [
         "ДЕМО: видимые капли и потёки жидкости у уплотнения"
-      ]
+      ],
+      "source_original_file": "seal-leak-demo.png",
+      "source_original_sha256": "6a9d2157b9a15b96874dc136550e292b15d5ebf223fcd94e907fff57c1d92689",
+      "source_original_bytes": 6297627,
+      "source_original_format": "PNG",
+      "source_original_changes": "Оригинал организаторов без изменений; водяные знаки сохранены.",
+      "lossless_encoding": {
+        "encoder": "cwebp -lossless -exact -m 6 -q 100 -metadata all",
+        "decoded_rgba_sha256": "b9f53997d86cc9ae3c6dd79651db5a6c741f9dd4369c570afb30b889ae62e0f4",
+        "decoded_pixels_identical": true
+      }
     },
     {
       "id": "anchor-condition-demo",
       "name": "ДЕМО: фундаментная плита и выступающая шпилька",
-      "file": "anchor-condition-demo.png",
+      "file": "anchor-condition-demo.webp",
       "description": "Крупный план фундаментного крепления с коррозией и одной сильно выступающей резьбовой шпилькой. Синтетический материал организаторов; принадлежность модели насоса не установлена. Момент затяжки, ослабление и отсутствие гайки изображение не подтверждает. Это крупный план отдельного узла, электродвигатель не показан.",
       "equipment_type": "centrifugal-node-demo",
       "source_url": "https://disk.yandex.ru/d/CaiCoW791_PlJA",
@@ -160,21 +196,31 @@
       "real": false,
       "width": 2528,
       "height": 1696,
-      "bytes": 9648062,
-      "sha256": "2980cdb77858b89ea26519e0ffa1f1c5376baeda1a716e14deac1a242d169f6d",
-      "changes": "Оригинал организаторов без изменений; водяные знаки сохранены.",
+      "bytes": 5881322,
+      "sha256": "0fc8f2f3053df5617262b6457f051f6d0ade67a94df2ca422c69359f9433b1c3",
+      "changes": "Перекодировано в WebP lossless exact; размеры и декодированные RGBA-пиксели побайтно совпадают с исходным PNG. Водяные знаки сохранены; исходный файловый SHA записан отдельно.",
       "inventory_number": "pump_demo_007",
       "serial_number": "DEMO-PUMP-2026-007",
       "qr_file": "anchor-condition-demo-qr.svg",
       "expected_observations": [
         "ДЕМО: коррозия фундаментной плиты",
         "ДЕМО: одна шпилька выступает выше соседних"
-      ]
+      ],
+      "source_original_file": "anchor-condition-demo.png",
+      "source_original_sha256": "2980cdb77858b89ea26519e0ffa1f1c5376baeda1a716e14deac1a242d169f6d",
+      "source_original_bytes": 9648062,
+      "source_original_format": "PNG",
+      "source_original_changes": "Оригинал организаторов без изменений; водяные знаки сохранены.",
+      "lossless_encoding": {
+        "encoder": "cwebp -lossless -exact -m 6 -q 100 -metadata all",
+        "decoded_rgba_sha256": "f37c6bff271dd3f399885c73aa0233094106d15145b7171e024400237a8e951b",
+        "decoded_pixels_identical": true
+      }
     },
     {
       "id": "guard-missing-demo",
       "name": "ДЕМО: отсутствует защитный кожух муфты",
-      "file": "guard-missing-demo.png",
+      "file": "guard-missing-demo.webp",
       "description": "Синтетический демонстрационный горизонтальный центробежный агрегат с электродвигателем на общей раме. Между насосом и мотором открытая муфта, защитный кожух не показан. Это иллюстрация визуального признака, не фото работающей установки и не независимый тест модели.",
       "equipment_type": "horizontal-centrifugal-demo",
       "source_url": "https://openai.com/policies/terms-of-use/",
@@ -186,20 +232,30 @@
       "real": false,
       "width": 1536,
       "height": 1024,
-      "bytes": 2643412,
-      "sha256": "033df3ce8826390019ec020b4341fd5d9dd49976c8321399059e312f20eeb55f",
-      "changes": "Исходный результат генерации без редактирования.",
+      "bytes": 1741598,
+      "sha256": "481805c1dc8c9bade8fc0e86fec58ab5d6c798034e50271d167b26315271a0c5",
+      "changes": "Перекодировано в WebP lossless exact; размеры и декодированные RGBA-пиксели побайтно совпадают с исходным PNG. Водяные знаки сохранены; исходный файловый SHA записан отдельно.",
       "inventory_number": "pump_demo_008",
       "serial_number": "DEMO-PUMP-2026-008",
       "qr_file": "guard-missing-demo-qr.svg",
       "expected_observations": [
         "ДЕМО: муфта открыта, защитный кожух отсутствует"
-      ]
+      ],
+      "source_original_file": "guard-missing-demo.png",
+      "source_original_sha256": "033df3ce8826390019ec020b4341fd5d9dd49976c8321399059e312f20eeb55f",
+      "source_original_bytes": 2643412,
+      "source_original_format": "PNG",
+      "source_original_changes": "Исходный результат генерации без редактирования.",
+      "lossless_encoding": {
+        "encoder": "cwebp -lossless -exact -m 6 -q 100 -metadata all",
+        "decoded_rgba_sha256": "74ff35696423e4f9ae39c93178eeee767c2bfd1a1c664406535ed795879251ee",
+        "decoded_pixels_identical": true
+      }
     },
     {
       "id": "oil-low-demo",
       "name": "ДЕМО: уровень масла ниже MIN",
-      "file": "oil-low-demo.png",
+      "file": "oil-low-demo.webp",
       "description": "Синтетический демонстрационный горизонтальный центробежный агрегат. В смотровом стекле подшипникового корпуса видимый уровень жидкости ниже обозначения MIN. Это иллюстрация визуального признака; состояние масла, перегрев и фактический износ не установлены.",
       "equipment_type": "horizontal-centrifugal-demo",
       "source_url": "https://openai.com/policies/terms-of-use/",
@@ -211,15 +267,25 @@
       "real": false,
       "width": 1536,
       "height": 1024,
-      "bytes": 2667208,
-      "sha256": "86c6fb09b67378e543b7f45ffe680ff642c0e25330f926430c8d7e200bb369df",
-      "changes": "Исходный результат генерации без редактирования.",
+      "bytes": 1717296,
+      "sha256": "d66b1cc8b1e81ce4d881990f793b77d695f95a8708658831713c66491a3af2f4",
+      "changes": "Перекодировано в WebP lossless exact; размеры и декодированные RGBA-пиксели побайтно совпадают с исходным PNG. Водяные знаки сохранены; исходный файловый SHA записан отдельно.",
       "inventory_number": "pump_demo_009",
       "serial_number": "DEMO-PUMP-2026-009",
       "qr_file": "oil-low-demo-qr.svg",
       "expected_observations": [
         "ДЕМО: видимый уровень жидкости ниже метки MIN"
-      ]
+      ],
+      "source_original_file": "oil-low-demo.png",
+      "source_original_sha256": "86c6fb09b67378e543b7f45ffe680ff642c0e25330f926430c8d7e200bb369df",
+      "source_original_bytes": 2667208,
+      "source_original_format": "PNG",
+      "source_original_changes": "Исходный результат генерации без редактирования.",
+      "lossless_encoding": {
+        "encoder": "cwebp -lossless -exact -m 6 -q 100 -metadata all",
+        "decoded_rgba_sha256": "39c18ba6fa65a81f2474fdc1f15474ddebc75886157e2a82663365da17862f57",
+        "decoded_pixels_identical": true
+      }
     }
   ]
 }
