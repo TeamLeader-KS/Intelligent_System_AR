@@ -1,0 +1,68 @@
+{
+  "runtime_network_required": false,
+  "files": [
+    {
+      "name": "swagger-ui-bundle.js",
+      "file": "swagger-ui-bundle.js.gz",
+      "package": "swagger-ui-dist",
+      "version": "5.17.14",
+      "package_path": "swagger-ui-bundle.js",
+      "source_sha256": "c2e4a9ef08144839ff47c14202063ecfe4e59e70a4e7154a26bd50d880c88ba1",
+      "gzip_sha256": "0e62996190edfdfa091f9f1ff1a767723519168ee1bce24d17334b2e6dfd7536",
+      "source_bytes": 1452753,
+      "gzip_bytes": 401755
+    },
+    {
+      "name": "swagger-ui.css",
+      "file": "swagger-ui.css.gz",
+      "package": "swagger-ui-dist",
+      "version": "5.17.14",
+      "package_path": "swagger-ui.css",
+      "source_sha256": "40170f0ee859d17f92131ba707329a88a070e4f66874d11365e9a77d232f6117",
+      "gzip_sha256": "b4ff4516862abe4adfde0612adc71a3b844159a0b96893b3a3e588dedeb8ce7e",
+      "source_bytes": 152071,
+      "gzip_bytes": 23094
+    },
+    {
+      "name": "redoc.standalone.js",
+      "file": "redoc.standalone.js.gz",
+      "package": "redoc",
+      "version": "2.1.5",
+      "package_path": "bundles/redoc.standalone.js",
+      "source_sha256": "be5c3330c8c35b8fceb29a5b7552ad45bffc2fd9494fe2e1a82fa94179eb5f8f",
+      "gzip_sha256": "188846ee0b9404e9d816f845e9fdbcadc550db098dd61e09250f707d1bf89042",
+      "source_bytes": 907625,
+      "gzip_bytes": 276047
+    }
+  ],
+  "packages": [
+    {
+      "name": "swagger-ui-dist",
+      "version": "5.17.14",
+      "metadata_url": "https://registry.npmjs.org/swagger-ui-dist/5.17.14",
+      "tarball_url": "https://registry.npmjs.org/swagger-ui-dist/-/swagger-ui-dist-5.17.14.tgz",
+      "npm_integrity": "sha512-CVbSfaLpstV65OnSjbXfVd6Sta3q3F7Cj/yYuvHMp1P90LztOLs6PfUnKEVAeiIVQt9u2SaPwv0LiH/OyMjHRw==",
+      "tarball_sha256": "c57badf459aa6e65cc036b3862d0502a63f9a22546407ffcb0e64f85f816bb28",
+      "license": "Apache-2.0",
+      "license_file": "swagger-ui-dist-LICENSE.txt",
+      "license_sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "release_url": "https://github.com/swagger-api/swagger-ui/releases/tag/v5.17.14",
+      "third_party_notice_file": "swagger-ui-dist-THIRD-PARTY-NOTICES.txt",
+      "third_party_notice_sha256": "0d20d1adef18aee3f40dd258172155521ce702ac445cb5f7b7d60ed32dad2fb2"
+    },
+    {
+      "name": "redoc",
+      "version": "2.1.5",
+      "metadata_url": "https://registry.npmjs.org/redoc/2.1.5",
+      "tarball_url": "https://registry.npmjs.org/redoc/-/redoc-2.1.5.tgz",
+      "npm_integrity": "sha512-POSbVg+7WLf+/5/c6GWLxL7+9t2D+1WlZdLN0a6qaCQc+ih3XYzteRBkXEN5kjrYrRNjdspfxTZkDLN5WV3Tzg==",
+      "tarball_sha256": "37bf41c2d864aa515500d630137870c26a7876b601f746c36cecc45fdde3f2dd",
+      "license": "MIT",
+      "license_file": "redoc-LICENSE.txt",
+      "license_sha256": "d3026d549cf68ab7355bcfa85877bf8f845b3334a7efbfdc63936432fb34ff0e",
+      "release_url": "https://github.com/Redocly/redoc/releases/tag/v2.1.5",
+      "third_party_notice_file": "redoc-THIRD-PARTY-NOTICES.txt",
+      "third_party_notice_sha256": "94bcd70c7e09c9de1169e9ed3f0af61f22483dcecd364a7cd45f741247553a14"
+    }
+  ]
+}

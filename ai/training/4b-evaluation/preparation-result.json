@@ -1,0 +1,7 @@
+{
+  "status": "VERIFIED_NEW_TAG_READY",
+  "model": "qwen3-vl:4b-instruct",
+  "manifest_sha256": "84f7ed8042fa7cdbd902f7dcb7d0370e032095047cc3244179f263b77b5bc318",
+  "total_bytes": 3337225651,
+  "production_2b_sha256_unchanged": "afc393e3572c07db0bc84aa460d928a16c75f3fbb9ca9e0dccc4fbd2dafb573e"
+}

@@ -7,6 +7,7 @@ import hashlib
 import json
 import os
 import re
+import stat
 import sys
 import tempfile
 import urllib.error
@@ -17,7 +18,8 @@ from pathlib import Path, PurePosixPath
 BASE = Path(__file__).resolve().parents[1]
 PUBLIC_SOURCE = "https://disk.yandex.ru/d/CaiCoW791_PlJA"
 DOWNLOAD_API = "https://cloud-api.yandex.net/v1/disk/public/resources/download"
-ALLOWED_HOSTS = {"cloud-api.yandex.net", "downloader.disk.yandex.ru"}
+# The public downloader currently redirects to this exact official storage host.
+ALLOWED_HOSTS = {"cloud-api.yandex.net", "downloader.disk.yandex.ru", "mds.storage.yandex.net"}
 SHA256 = re.compile(r"[0-9a-f]{64}\Z")
 MAX_FILE_BYTES = 100_000_000
 MAX_TOTAL_BYTES = 500_000_000
@@ -115,14 +117,79 @@ def verified(target: Path, entry: dict) -> bool:
     return digest.hexdigest() == entry["sha256"]
 
 
-def restore(entry: dict, verify_only: bool) -> bool:
+def publish_stream(source, target: Path, entry: dict) -> None:
+    """Publish only bounded, rehashed public material with readable permissions."""
+    target.parent.mkdir(parents=True, exist_ok=True)
+    fd, name = tempfile.mkstemp(prefix=".organizer-", suffix=".partial", dir=target.parent)
+    temporary = Path(name)
+    try:
+        digest = hashlib.sha256()
+        count = 0
+        with os.fdopen(fd, "wb") as output:
+            while chunk := source.read(1024 * 1024):
+                count += len(chunk)
+                if count > entry["bytes"]:
+                    raise DownloadError("Размер материала превышает закрепленный размер")
+                digest.update(chunk)
+                output.write(chunk)
+        if count != entry["bytes"] or digest.hexdigest() != entry["sha256"]:
+            raise DownloadError("Размер или SHA256 не совпал; материал не опубликован")
+        temporary.chmod(0o644)
+        temporary.replace(target)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def restore_seed(seed_dir: Path, target: Path, entry: dict) -> bool:
+    """Walk the exact path using directory FDs; never follow cache symlinks."""
+    if not hasattr(os, "O_NOFOLLOW") or os.open not in os.supports_dir_fd:
+        return False  # Docker/Linux supports secure directory-FD traversal.
+    descriptors = []
+    try:
+        root = seed_dir.resolve(strict=True)
+        directory = os.open(root, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        descriptors.append(directory)
+        parts = PurePosixPath(entry["original_path"]).parts[1:]
+        for part in parts[:-1]:
+            directory = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=directory)
+            descriptors.append(directory)
+        fd = os.open(parts[-1], os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=directory)
+        with os.fdopen(fd, "rb") as source:
+            info = os.fstat(source.fileno())
+            if not stat.S_ISREG(info.st_mode) or info.st_size != entry["bytes"]:
+                return False
+            digest = hashlib.sha256()
+            count = 0
+            for chunk in iter(lambda: source.read(1024 * 1024), b""):
+                count += len(chunk)
+                if count > entry["bytes"]:
+                    return False
+                digest.update(chunk)
+            if count != entry["bytes"] or digest.hexdigest() != entry["sha256"]:
+                return False
+            source.seek(0)
+            publish_stream(source, target, entry)  # Recheck during copying, including in-place mutation.
+        print("ИЗ ЛОКАЛЬНОГО КЕША", entry["original_path"], flush=True)
+        return True
+    except (OSError, DownloadError):
+        return False
+    finally:
+        for descriptor in reversed(descriptors):
+            os.close(descriptor)
+
+
+def restore(entry: dict, verify_only: bool, seed_dir: Path | None = None) -> bool:
     target = target_path(entry)
     if verified(target, entry):
+        if not verify_only and stat.S_IMODE(target.stat().st_mode) != 0o644:
+            target.chmod(0o644)  # Only SHA-verified public organizer files, never secrets.
         print("ПРОВЕРЕН", entry["original_path"], flush=True)
         return True
     if verify_only:
         print("ОТСУТСТВУЕТ ИЛИ ПОВРЕЖДЁН", entry["original_path"], flush=True)
         return False
+    if seed_dir is not None and restore_seed(seed_dir, target, entry):
+        return True
     query = urllib.parse.urlencode({"public_key": PUBLIC_SOURCE, "path": entry["original_path"]})
     with open_official(DOWNLOAD_API + "?" + query) as response:
         raw = response.read(65537)
@@ -134,32 +201,16 @@ def restore(entry: dict, verify_only: bool) -> bool:
             raise ValueError()
     except (KeyError, TypeError, ValueError):
         raise DownloadError("API не вернул разрешённую ссылку на материал") from None
-    target.parent.mkdir(parents=True, exist_ok=True)
-    # Unique staging file prevents interrupted/parallel launches from publishing partial bytes.
-    fd, name = tempfile.mkstemp(prefix=".organizer-", suffix=".partial", dir=target.parent)
-    temporary = Path(name)
-    try:
-        digest = hashlib.sha256()
-        count = 0
-        with os.fdopen(fd, "wb") as output, open_official(href) as response:
-            while chunk := response.read(1024 * 1024):
-                count += len(chunk)
-                if count > entry["bytes"]:
-                    raise DownloadError("Размер загрузки превышает закрепленный размер; исходный файл мог измениться")
-                digest.update(chunk)
-                output.write(chunk)
-        if count != entry["bytes"] or digest.hexdigest() != entry["sha256"]:
-            raise DownloadError("Размер или SHA256 не совпал; материал не опубликован, проверьте актуальность манифеста")
-        temporary.replace(target)
-        print("ЗАГРУЖЕН И ПРОВЕРЕН", entry["original_path"], flush=True)
-        return True
-    finally:
-        temporary.unlink(missing_ok=True)
+    with open_official(href) as response:
+        publish_stream(response, target, entry)
+    print("ЗАГРУЖЕН И ПРОВЕРЕН", entry["original_path"], flush=True)
+    return True
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--verify-only", action="store_true", help="Проверить исходники без сети и изменений")
+    parser.add_argument("--seed-dir", type=Path, help="Локальный кеш с исходной иерархией; проверяется до HTTPS-загрузки")
     parser.add_argument("--file", help="Один точный original_path из source-manifest.json, например /Температура/БД значений (температура).xlsx")
     parser.add_argument("--workers", type=int, choices=range(1, 5), default=4, help="Число параллельных файлов: 1–4")
     arguments = parser.parse_args()
@@ -170,7 +221,7 @@ def main() -> int:
             if not entries:
                 raise DownloadError("Указанный путь отсутствует в закрепленном манифесте")
         with concurrent.futures.ThreadPoolExecutor(max_workers=arguments.workers) as pool:
-            results = list(pool.map(lambda entry: restore(entry, arguments.verify_only), entries))
+            results = list(pool.map(lambda entry: restore(entry, arguments.verify_only, arguments.seed_dir), entries))
         print(f"Готово: проверено {sum(results)}/{len(entries)} файлов")
         return 0 if all(results) else 1
     except DownloadError as exc:

@@ -1,0 +1,77 @@
+appId: com.example.intelligent_system_ar
+name: Industrial Vision - login and demo card
+# Maestro imports MAESTRO_* shell variables; do not put a real password in YAML/CLI arguments.
+env:
+  IV_TEST_SERVER: ${MAESTRO_IV_TEST_SERVER}
+  IV_TEST_PASSWORD: ${MAESTRO_IV_TEST_PASSWORD}
+---
+# This clears local app data/outbox. Run only on a dedicated test emulator/account.
+- launchApp:
+    clearState: true
+    permissions:
+      all: allow
+- extendedWaitUntil:
+    visible: "Вход в систему"
+    timeout: 30000
+# Automatic discovery disables the server input for up to seven seconds.
+- extendedWaitUntil:
+    visible: "Найти сервер в Wi-Fi"
+    timeout: 30000
+- tapOn: "Адрес сервера"
+# Make even an initially empty field non-empty and multi-word before selecting all.
+# Backspace alone is unsafe: tapping the Compose label can put the cursor at the start.
+- inputText: " IV TEST FIELD RESET "
+- longPressOn:
+    focused: true
+- runFlow:
+    when:
+      notVisible: "(?i)select all"
+    commands:
+      - tapOn: "(?i)more options"
+- tapOn: "(?i)select all"
+- eraseText: 1
+- inputText: ${IV_TEST_SERVER}
+# Fail at the field itself if the UI did not replace the complete value.
+- assertVisible:
+    text: ${IV_TEST_SERVER}
+    focused: true
+- hideKeyboard
+- scrollUntilVisible:
+    element: "Логин"
+    direction: DOWN
+- tapOn: "Логин"
+- inputText: "pump_engineer"
+- hideKeyboard
+- scrollUntilVisible:
+    element: "Пароль"
+    direction: DOWN
+- tapOn: "Пароль"
+- inputText:
+    text: ${IV_TEST_PASSWORD}
+    label: "Enter isolated test account password (keep masked)"
+- hideKeyboard
+- scrollUntilVisible:
+    element: "Войти"
+    direction: DOWN
+- tapOn: "Войти"
+- extendedWaitUntil:
+    visible: "Оборудование"
+    timeout: 60000
+- tapOn: "Оборудование"
+- tapOn: "Маркировка / инвентарный номер"
+- inputText: "pump_demo_001"
+- hideKeyboard
+- tapOn: "Найти"
+- scrollUntilVisible:
+    element: "Инвентарный номер: pump_demo_001"
+    direction: DOWN
+    timeout: 30000
+- assertVisible: "Инвентарный номер: pump_demo_001"
+- assertVisible: "Заводской номер: DEMO-PUMP-2026-001"
+- takeScreenshot: "smoke-demo-card"
+- scrollUntilVisible:
+    element: "ДЕМО · Насос"
+    direction: DOWN
+    timeout: 30000
+- assertVisible: "ДЕМО · Насос"
+# Keep the equipment dialog open; camera.yaml continues this exact state.

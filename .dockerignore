@@ -15,4 +15,5 @@ ai/
 # Original documents are mounted read-only; do not send 186 MB into image builds.
 data/organizers/raw/
 data/organizers/extracted/
+.local-testing/
 *.zip

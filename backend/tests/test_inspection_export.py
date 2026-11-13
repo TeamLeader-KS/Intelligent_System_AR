@@ -91,3 +91,64 @@ def test_pdf_supports_cyrillic_and_paginates_long_evidence(inspection, tmp_path)
 def test_unknown_export_format_is_rejected(inspection):
     with pytest.raises(ValueError, match="PDF и XLSX"):
         render_inspection(inspection, "csv")
+
+
+@pytest.fixture
+def vision_context():
+    return {"detection_index": 0, "component_id": 3, "association": "MODEL_PROPOSED",
+            "binding_confirmed": False, "as_of": "2026-11-13T13:59:00Z", "context_source": "DIGITAL_CARD",
+            "name": "Исходный насос", "model": "Паспортный вариант", "installed_on": None,
+            "operating_hours": None, "operating_cycles": 0, "last_serviced_at": None,
+            "last_service_hours": 0, "service_interval_hours": 3000, "runtime_state": "STOPPED", "revision": 0,
+            "resource": {"basis": "NORMATIVE", "status": "INSUFFICIENT_DATA", "service_due": False,
+                "service_remaining_hours": 0, "estimates": {"hours": {"norm": 11000, "used": None, "remaining": None}},
+                "limitations": "Наработка неизвестна; прогноз отказа не выполнялся."},
+            "attention_reasons": ["Исходная причина внимания по карточке"],
+            "limitations": "Привязка предложена моделью и не подтверждена."}
+
+
+def test_xlsx_exports_original_context_snapshot_without_merging_current_review_values(inspection, vision_context):
+    original = {**deepcopy(inspection), "component_context": [deepcopy(vision_context)]}
+    body = {**inspection, "review_status": "CONFIRMED", "original_result": original,
+            "latest_review": {"comment": "Независимое решение инженера"},
+            "component_context": [{**vision_context, "name": "Текущий заменённый насос", "operating_hours": 777777,
+                                   "as_of": "2027-01-01T00:00:00Z", "binding_confirmed": True}]}
+    before = deepcopy(body)
+    content = render_inspection(body, "xlsx")
+    workbook = load_workbook(BytesIO(content), read_only=True, data_only=False)
+    rows = list(workbook.active.iter_rows(values_only=True))
+    start = next(i for i, row in enumerate(rows) if row[0] == "Сохранённый контекст узла 1")
+    end = next(i for i in range(start + 1, len(rows)) if rows[i][0] == "Последнее решение специалиста")
+    fields = {row[0]: row[1] for row in rows[start + 1:end] if row[0]}
+    assert fields["Компонент"] == "Исходный насос"
+    assert fields["Данные карточки на"] == vision_context["as_of"]
+    assert fields["Привязка к карточке"] == "Предложена моделью, требует проверки"
+    assert fields["Привязка подтверждена"] == fields["Срок обслуживания наступил"] == "Нет"
+    assert fields["Индекс визуальной находки (с нуля)"] == fields["Количество циклов"] == fields["Версия карточки"] == "0"
+    assert fields["Наработка, ч"] == fields["Последнее обслуживание"] == fields["Расчётный остаток, ч"] == "Не указано"
+    assert fields["Наработка при последнем ТО, ч"] == fields["До обслуживания, ч"] == "0"
+    assert fields["Норматив, ч"] == "11000"
+    assert fields["Причины внимания по карточке"] == vision_context["attention_reasons"][0]
+    assert fields["Ограничения контекста"] == vision_context["limitations"]
+    values = text_values(content)
+    assert "777777" not in values and "Текущий заменённый насос" not in values
+    assert "Независимое решение инженера" in values
+    assert body == before
+    workbook.close()
+
+
+def test_pdf_prints_saved_context_and_unknown_resource(inspection, vision_context, tmp_path):
+    inspection["component_context"] = [vision_context, {"association": "UNRESOLVED", "binding_confirmed": False}]
+    content = render_inspection(inspection, "pdf")
+    assert content.startswith(b"%PDF-")
+    if shutil.which("pdftotext"):
+        path = tmp_path / "vision-context.pdf"
+        path.write_bytes(content)
+        text = subprocess.check_output(["pdftotext", "-layout", str(path), "-"], text=True)
+        assert "Сохранённый контекст узла 1" in text and "Сохранённый контекст узла 2" in text
+        assert "Предложена моделью, требует проверки" in text
+        assert "2026-11-13T13:59:00Z" in text
+        assert "Наработка, ч: Не указано" in text
+        assert "Привязка подтверждена: Нет" in text
+        assert "Точная привязка не установлена" in text
+        assert vision_context["attention_reasons"][0] in text

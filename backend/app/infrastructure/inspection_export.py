@@ -75,6 +75,36 @@ def _sections(body: dict) -> list[tuple[str, list[tuple[str, str]]]]:
             ("recommendation", "Предварительная рекомендация"),
             ("confidence", "Уверенность (0–1)"), ("accepted", "Выше порога"),
             ("box", "Рамка исходного кадра"), ("defect_id", "ID дефекта в справочнике")))))
+    for index, context in enumerate(original.get("component_context") or [], 1):
+        rows = [(label, _text(context.get(key))) for key, label in (
+            ("detection_index", "Индекс визуальной находки (с нуля)"),
+            ("component_id", "Предложенный ID компонента"), ("name", "Компонент"), ("model", "Модель"),
+            ("binding_confirmed", "Привязка подтверждена"), ("as_of", "Данные карточки на"),
+            ("context_source", "Источник контекста"), ("installed_on", "Дата установки"),
+            ("operating_hours", "Наработка, ч"), ("operating_cycles", "Количество циклов"),
+            ("last_serviced_at", "Последнее обслуживание"), ("last_service_hours", "Наработка при последнем ТО, ч"),
+            ("service_interval_hours", "Интервал обслуживания, ч"), ("runtime_state", "Режим работы"),
+            ("revision", "Версия карточки"))]
+        association = {"MODEL_PROPOSED": "Предложена моделью, требует проверки",
+                       "UNRESOLVED": "Точная привязка не установлена"}.get(context.get("association"), _text(context.get("association")))
+        rows.append(("Привязка к карточке", association))
+        resource = context.get("resource")
+        if isinstance(resource, dict):
+            rows += [(label, _text(resource.get(key))) for key, label in (
+                ("basis", "Основа расчёта"), ("status", "Статус ресурса"),
+                ("service_remaining_hours", "До обслуживания, ч"), ("service_due", "Срок обслуживания наступил"))]
+            for measure, estimate in (resource.get("estimates") or {}).items():
+                unit = {"hours": "ч", "days": "дней", "cycles": "циклов"}.get(measure, measure)
+                rows += [(label, _text(estimate.get(key))) for key, label in (
+                    ("norm", f"Норматив, {unit}"), ("used", f"Использовано, {unit}"),
+                    ("remaining", f"Расчётный остаток, {unit}"))]
+            rows.append(("Ограничения расчёта", _text(resource.get("limitations"))))
+        else:
+            rows.append(("Ресурс связанного компонента", "Не указано"))
+        reasons = context.get("attention_reasons") or []
+        rows.append(("Причины внимания по карточке", "\n".join(reasons) if reasons else "Не перечислены"))
+        rows.append(("Ограничения контекста", _text(context.get("limitations"))))
+        sections.append((f"Сохранённый контекст узла {index}", rows))
     if review := body.get("latest_review"):
         sections.append(("Последнее решение специалиста", _fields(review, (
             ("review_id", "Номер проверки"), ("decision", "Решение"), ("status", "Категория"),

@@ -1,0 +1,65 @@
+{
+  "source_url": "https://registry.ollama.ai/v2/library/qwen3-vl/manifests/4b-instruct",
+  "model_tag": "qwen3-vl:4b-instruct",
+  "manifest_sha256": "84f7ed8042fa7cdbd902f7dcb7d0370e032095047cc3244179f263b77b5bc318",
+  "total_bytes": 3337225651,
+  "blobs": [
+    {
+      "mediaType": "application/vnd.docker.container.image.v1+json",
+      "digest": "sha256:a67151e7009487ea73bb4377d878c1e3d89f19c8ae05422d76e86935e3273fa6",
+      "size": 206
+    },
+    {
+      "mediaType": "application/vnd.ollama.image.model",
+      "digest": "sha256:3a859c4dca6883593e389a08987f04762f2a374d475cabc1538360473a72b1da",
+      "size": 2497888288,
+      "from": "dhiltgen/qwen3-vl:4b-instruct-q4_K_M-llamacpp"
+    },
+    {
+      "mediaType": "application/vnd.ollama.image.projector",
+      "digest": "sha256:70ac570fd36b65a64fbb99883c34d5196368c1cf8f63d8402802a34a0ed2b363",
+      "size": 839325760,
+      "from": "dhiltgen/qwen3-vl:4b-instruct-q4_K_M-llamacpp"
+    },
+    {
+      "mediaType": "application/vnd.ollama.image.license",
+      "digest": "sha256:7339fa418c9ad3e8e12e74ad0fd26a9cc4be8703f9c110728a992b193be85cb2",
+      "size": 11355,
+      "from": "dhiltgen/qwen3-vl:4b-instruct-q4_K_M-llamacpp"
+    },
+    {
+      "mediaType": "application/vnd.ollama.image.params",
+      "digest": "sha256:f6417cb1e26962991f8e875a93f3cb0f92bc9b4955e004881251ccbf934a19d2",
+      "size": 42,
+      "from": "dhiltgen/qwen3-vl:4b-instruct-q4_K_M-llamacpp"
+    }
+  ],
+  "status": "EVALUATED_REJECTED_FOR_PRODUCTION_FAULT_UPGRADE",
+  "license": "Apache-2.0",
+  "license_file": "LICENSE-APACHE-2.0.txt",
+  "license_sha256": "7339fa418c9ad3e8e12e74ad0fd26a9cc4be8703f9c110728a992b193be85cb2",
+  "release_url": "https://ollama.com/library/qwen3-vl:4b-instruct",
+  "production_model_changed": false,
+  "accuracy_metrics": null,
+  "cases": [
+    {
+      "id": "normal_ksb",
+      "source_file": "ai/demo/pumps/ksb-etanorm.jpg",
+      "sha256": "f142906db310a07f71e956e6fe036e0eef05bad13dfab623357177e17ed72ac4"
+    },
+    {
+      "id": "exposed_coupling_synthetic",
+      "source_file": "ai/demo/pumps/guard-missing-demo.webp",
+      "sha256": "481805c1dc8c9bade8fc0e86fec58ab5d6c798034e50271d167b26315271a0c5",
+      "original_png_sha256_before_parallel_asset_conversion": "033df3ce8826390019ec020b4341fd5d9dd49976c8321399059e312f20eeb55f"
+    },
+    {
+      "id": "oil_below_min_synthetic",
+      "source_file": "ai/demo/pumps/oil-low-demo.webp",
+      "sha256": "d66b1cc8b1e81ce4d881990f793b77d695f95a8708658831713c66491a3af2f4",
+      "original_png_sha256_before_parallel_asset_conversion": "86c6fb09b67378e543b7f45ffe680ff642c0e25330f926430c8d7e200bb369df"
+    }
+  ],
+  "preparation_result": "preparation-result.json",
+  "evaluation_report": "report.json"
+}

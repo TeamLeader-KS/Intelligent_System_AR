@@ -1,0 +1,3 @@
+# Raw preparation progress is local; commit verified metadata and final reports.
+*.log
+*.partial

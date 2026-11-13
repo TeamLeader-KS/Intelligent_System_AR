@@ -1,0 +1,77 @@
+{
+  "status": "EVALUATED_REJECTED_FOR_PRODUCTION_FAULT_UPGRADE",
+  "production_model_changed": false,
+  "production_2b_manifest_sha256": "afc393e3572c07db0bc84aa460d928a16c75f3fbb9ca9e0dccc4fbd2dafb573e",
+  "candidate_tag": "qwen3-vl:4b-instruct",
+  "candidate_digest": "84f7ed8042fa7cdbd902f7dcb7d0370e032095047cc3244179f263b77b5bc318",
+  "verified_download_bytes": 3337225651,
+  "license": "Apache-2.0",
+  "real_inference_calls": 3,
+  "timeout_seconds_per_call": 240,
+  "raw_results": "results.jsonl",
+  "prompt_sha256": "1aeeb20afe1bdb5c57f3a731cf9873294576eb1d866814a59f0340fdae62212b",
+  "schema_sha256": "40f4d0faca701d6c705375c7fd4af8919266d800b65a4a880a3eb566ff604a67",
+  "adapter_sha256": "ecd97345308950237cda6e9f6708ccbcea7ca97eaa7ddb09664842bd3486d118",
+  "accuracy_metrics": null,
+  "independent_holdout": false,
+  "human_ground_truth": null,
+  "observations": [
+    {
+      "case": "normal_ksb",
+      "source_sha256": "f142906db310a07f71e956e6fe036e0eef05bad13dfab623357177e17ed72ac4",
+      "wall_ms": 76700,
+      "server_latency_ms": 76539,
+      "performance_ms": {
+        "total_duration": 76539,
+        "load_duration": 8116,
+        "prompt_eval_duration": 46946,
+        "eval_duration": 21425
+      },
+      "error": null,
+      "observed": "Pump and motor localized; defects empty. No additional corrosion emitted.",
+      "intended_probe": "Unsupported corrosion on nominally normal KSB catalog image",
+      "assessment": "Useful observation on one familiar image, not proof of healthy equipment or measured false-positive rate."
+    },
+    {
+      "case": "exposed_coupling_synthetic",
+      "source_sha256": "481805c1dc8c9bade8fc0e86fec58ab5d6c798034e50271d167b26315271a0c5",
+      "wall_ms": 85052,
+      "server_latency_ms": 84961,
+      "performance_ms": {
+        "total_duration": 84961,
+        "load_duration": 3,
+        "prompt_eval_duration": 45101,
+        "eval_duration": 39735
+      },
+      "error": null,
+      "observed": "Pump/motor localized. Exposed coupling/guard_missing not reported; broad surface_damage findings on base/fasteners.",
+      "intended_probe": "Clearly exposed coupling region between pump and motor",
+      "assessment": "Required visual guard observation missed. Other surface wear/rust hypotheses remain unreviewed."
+    },
+    {
+      "case": "oil_below_min_synthetic",
+      "source_sha256": "d66b1cc8b1e81ce4d881990f793b77d695f95a8708658831713c66491a3af2f4",
+      "wall_ms": 79133,
+      "server_latency_ms": 79042,
+      "performance_ms": {
+        "total_duration": 79042,
+        "load_duration": 3,
+        "prompt_eval_duration": 41934,
+        "eval_duration": 36958
+      },
+      "error": null,
+      "observed": "Pump/motor localized, sight glass area localized but reported as surface_damage with component_type seal; no oil_abnormal or below-MIN statement. Additional base corrosion reported.",
+      "intended_probe": "Visible liquid boundary below MIN inside synthetic sight glass",
+      "assessment": "Required below-MIN interpretation missed despite locating glass. Defect code/component semantics unreliable."
+    }
+  ],
+  "conclusion": "4B gives useful generic pump/motor localization on these familiar probes, but misses both exposed-coupling guard and below-MIN oil observations. It is not a validated replacement for fault detection and is not promoted into production. Keep separate cache tag for research only. Specialized reviewed training data/labels and independent real-equipment controls remain necessary.",
+  "limitations": [
+    "Three familiar development probes, two synthetic; no statistical accuracy claim.",
+    "All descriptions stayed English despite production prompt requesting Russian.",
+    "CPU-only run alongside parent emulator activity; timings are environment observations, not phone latency or reproducible comparative benchmarks.",
+    "Prior2B experiment substituted a different actual prompt; no paired same-prompt2B baseline in this bounded3call series.",
+    "components=[] means no component-ID association evaluation.",
+    "request_image_sha256 in raw JSONL hashes the base64 payload text, not decoded JPEG bytes; source_sha256 hashes actual original source bytes."
+  ]
+}

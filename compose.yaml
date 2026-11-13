@@ -70,6 +70,7 @@ services:
       - photos:/app/photos
       - ./ai/demo:/app/cv-demo:ro
       - ./data/organizers:/app/organizers:ro
+      - organizer-originals:/app/organizers/raw:ro
     depends_on:
       database:
         condition: service_healthy
@@ -91,6 +92,7 @@ services:
       - secrets:/app/local-secrets:ro
       - ./ai/demo:/app/cv-demo:ro
       - ./data/organizers:/app/organizers:ro
+      - organizer-originals:/app/organizers/raw:ro
     depends_on:
       backend:
         condition: service_healthy
@@ -113,6 +115,27 @@ services:
         condition: service_completed_successfully
     restart: "no"
     networks: [local]
+
+  organizer-prepare:
+    image: industrial-vision-demo-api:local
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      args:
+        VITE_ANDROID_APK_URL: /industrial-vision/android.apk
+    user: "0:0"
+    # Original documents are prepared once, alongside APK and model preparation.
+    command: [python, /app/organizers/tools/download_sources.py, --seed-dir, /seed]
+    volumes:
+      - ./data/organizers:/app/organizers:ro
+      - ./data/organizers/raw:/seed:ro
+      - organizer-originals:/app/organizers/raw
+    read_only: true
+    tmpfs: ["/tmp:size=16m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    networks: [local]
+    restart: "no"
 
   vision:
     image: ollama/ollama:0.40.16
@@ -160,6 +183,7 @@ volumes:
   gradle: {}
   android-signing: {}
   vision-models: {}
+  organizer-originals: {}
 networks:
   local: {}
   data:

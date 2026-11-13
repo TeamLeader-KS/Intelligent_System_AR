@@ -1,0 +1,70 @@
+appId: com.example.intelligent_system_ar
+name: Industrial Vision - attention camera capture and persisted history
+---
+# Root must inject a test image into the emulator's CAMERA before this flow.
+# No gallery/image-picker commands: this exercises ImageAnalysis/captureNextFrame.
+- runFlow: smoke.yaml
+- scrollUntilVisible:
+    element: "Закрыть"
+    direction: DOWN
+    timeout: 30000
+- tapOn: "Закрыть"
+- scrollUntilVisible:
+    element:
+      text: "Требуют внимания: [0-9]+"
+    direction: DOWN
+    timeout: 30000
+- tapOn:
+    text: "Требуют внимания: [0-9]+"
+- assertVisible: "Узлы требуют внимания"
+# A prepared due/approaching/unknown-resource component is a required fixture.
+# An empty attention queue must fail here, rather than silently bypassing the requirement.
+- scrollUntilVisible:
+    element: "Навести камеру на узел"
+    direction: DOWN
+    timeout: 20000
+- takeScreenshot: "camera-attention-reason"
+- tapOn:
+    text: "Навести камеру на узел"
+    index: 0
+- scrollUntilVisible:
+    element:
+      text: "Узел выбран вручную: .*"
+    direction: DOWN
+    timeout: 30000
+- assertVisible: "Наведите камеру на выбранный узел. Нажмите рамку для его карточки."
+- scrollUntilVisible:
+    element: "Замечание к осмотру"
+    direction: DOWN
+- tapOn: "Замечание к осмотру"
+- inputText: "MAESTRO_CAMERA_CAPTURE"
+- hideKeyboard
+- scrollUntilVisible:
+    element: "Сохранить осмотр с кадром"
+    direction: DOWN
+    timeout: 30000
+- takeScreenshot: "camera-before-capture"
+- tapOn: "Сохранить осмотр с кадром"
+- scrollUntilVisible:
+    element: "Осмотры и работы сохранены на сервере вместе с фотографиями"
+    direction: DOWN
+    timeout: 60000
+- assertVisible: "Осмотры и работы сохранены на сервере вместе с фотографиями"
+- takeScreenshot: "camera-capture-sent"
+- scrollUntilVisible:
+    element: "Оборудование"
+    direction: UP
+    timeout: 30000
+- tapOn: "Оборудование"
+- scrollUntilVisible:
+    element: "История осмотров"
+    direction: DOWN
+    timeout: 30000
+- tapOn: "История осмотров"
+- scrollUntilVisible:
+    element: "Замечание: MAESTRO_CAMERA_CAPTURE"
+    direction: DOWN
+    timeout: 60000
+- assertVisible: "Замечание: MAESTRO_CAMERA_CAPTURE"
+- assertVisible: "Источник: MODEL"
+- takeScreenshot: "camera-persisted-history"

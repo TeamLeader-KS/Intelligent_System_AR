@@ -36,7 +36,7 @@ def admin(client):
     return result
 
 def test_anonymous_is_denied(client):
-    for path in ("/docs","/openapi.json","/redoc","/api/v1/users","/api/v1/keys","/api/v1/auth/me","/api/v1/equipment","/api/v1/health"):
+    for path in ("/docs","/openapi.json","/redoc","/docs-assets/swagger-ui-bundle.js","/api/v1/users","/api/v1/keys","/api/v1/auth/me","/api/v1/equipment","/api/v1/health"):
         assert client.get(path).status_code==401, path
     assert client.get("/healthz").json()=={"status":"ok"}
 
@@ -47,6 +47,11 @@ def test_admin_cookie_docs_and_logout(client):
     assert "password_hash" not in result.json()
     assert client.get("/docs").status_code==200
     assert "/api/v1/users" in client.get("/openapi.json").json()["paths"]
+    for path, marker in (("/docs-assets/swagger-ui-bundle.js", b"SwaggerUIBundle"), ("/docs-assets/redoc.standalone.js", b"Redoc")):
+        asset = client.get(path)
+        assert asset.status_code == 200 and asset.headers["content-encoding"] == "gzip"
+        assert marker in asset.content  # HTTP client transparently decompresses the real local asset.
+    assert client.get("/docs-assets/manifest.json").status_code == 404
     assert client.post("/api/v1/auth/logout",headers=HEADERS).status_code==204
     assert client.get("/docs").status_code==401
 
@@ -96,7 +101,7 @@ def test_employee_mobile_only_and_scoping(client):
     headers={"Authorization":"Bearer "+token.json()["access_token"]}
     assert client.get("/api/v1/me",headers=headers).json()["login"]=="worker"
     assert [x["workshop_id"] for x in client.get("/api/v1/equipment",headers=headers).json()]==[w1]
-    for path in ("/docs","/openapi.json","/api/v1/users","/api/v1/keys","/api/v1/auth/me"):
+    for path in ("/docs","/openapi.json","/docs-assets/swagger-ui-bundle.js","/api/v1/users","/api/v1/keys","/api/v1/auth/me"):
         assert client.get(path,headers=headers).status_code==401
     assert client.post("/api/v1/workshops",json={"name":"Denied"},headers={**headers,**HEADERS}).status_code==401
 

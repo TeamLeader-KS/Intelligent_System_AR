@@ -5,7 +5,6 @@ from datetime import datetime, timedelta, timezone
 from dataclasses import asdict
 from typing import Annotated, Literal
 from fastapi import FastAPI, Depends, HTTPException, Request, Response, Security
-from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials, APIKeyCookie
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, HTMLResponse
@@ -40,6 +39,7 @@ from app.infrastructure.inspection_export import render_inspection
 from app.infrastructure.source_files import read_source_file
 from .source_schemas import SourceDocumentsOut, ReferenceDatasetsOut, ReferenceRowsOut
 from .browser_origin import local_browser_origin
+from .documentation import asset_response, docs_html, redoc_html
 from fastapi import Query, Header
 from fastapi.exceptions import RequestValidationError
 from fastapi.exception_handlers import request_validation_exception_handler
@@ -457,10 +457,13 @@ def create_app(url: str | None = None, *, secure: bool | None = None, origin: st
         return result
     @app.get("/docs", include_in_schema=False)
     def docs(user: Admin):
-        return get_swagger_ui_html(openapi_url=root_path+"/openapi.json", title="Industrial Vision API — документация",
-                                  swagger_ui_parameters={"filter":True,"displayRequestDuration":True,"docExpansion":"none","defaultModelsExpandDepth":1})
+        return docs_html(root_path)
     @app.get("/redoc", include_in_schema=False)
-    def redoc(user: Admin): return get_redoc_html(openapi_url=root_path+"/openapi.json",title="Industrial Vision API")
+    def redoc(user: Admin): return redoc_html(root_path)
+
+    @app.get("/docs-assets/{name}", include_in_schema=False)
+    def documentation_asset(name: str, user: Admin):
+        return asset_response(name)
 
     apk_path = os.getenv("ANDROID_APK_PATH")
     if apk_path:
