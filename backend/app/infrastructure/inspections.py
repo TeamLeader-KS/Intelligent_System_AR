@@ -34,7 +34,7 @@ class PostgresInspectionRepository:
             row = db.execute(select(*INSPECTION_COLUMNS).where(Inspection.author_id == author_id, Inspection.idempotency_key == key)).mappings().one()
             return InspectionRecord(**row), False
 
-    def complete(self, inspection_id: int, result: dict, media_type: str, checksum: str) -> bool:
+    def complete(self, inspection_id: int, result: dict, media_type: str | None, checksum: str | None) -> bool:
         with self.sessions.begin() as db:
             author_id = db.scalar(update(Inspection).where(Inspection.id == inspection_id, Inspection.processing_status == "PROCESSING",
                                                          Inspection.deadline > func.now())

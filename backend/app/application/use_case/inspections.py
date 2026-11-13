@@ -72,12 +72,16 @@ class InspectionsUseCase:
             raise AnalysisError("NOT_FOUND", "Осмотр не найден")
         response = self.response(record)
         body = reviewed_result(response.body, self.reviews.latest((inspection_id,)).get(inspection_id)) if response.status == 201 else response.body
+        if record.media_type and body.get("analysis_location") == "ANDROID":
+            body = {**body, "photo_id": record.id}
         return InspectionResponse(200 if response.status == 201 else response.status, body)
 
     def photo(self, *, photo_id: int, actor: Account) -> tuple[bytes, str]:
         record = self.queries.get(photo_id, actor)
         if record is None or record.processing_status != "COMPLETED":
             raise AnalysisError("NOT_FOUND", "Фотография не найдена")
+        if record.media_type is None and record.result.get("analysis_location") == "ANDROID":
+            raise AnalysisError("NOT_FOUND", "Фотография не загружена")
         if record.media_type not in ("image/jpeg", "image/png"):
             raise AnalysisError("STORAGE_UNAVAILABLE", "Метаданные фотографии повреждены")
         storage = self.storages.get(record.storage_backend)
@@ -96,5 +100,5 @@ class InspectionsUseCase:
         items = [{"inspection_id":row.id, "equipment_id":row.equipment_id, "author_id":row.author_id,
                   "workshop_id":row.workshop_id, "source":row.source, "created_at":row.created_at.astimezone(timezone.utc).isoformat().replace("+00:00", "Z"),
                   "processing_status":row.processing_status,
-                  "result":reviewed_result(row.result, reviews.get(row.id)) if row.result is not None else None, "error":row.error} for row in records]
+                  "result":reviewed_result({**row.result, "photo_id": row.id} if row.media_type and row.result.get("analysis_location") == "ANDROID" else row.result, reviews.get(row.id)) if row.result is not None else None, "error":row.error} for row in records]
         return {"items":items, "total":total, "limit":limit, "offset":offset}

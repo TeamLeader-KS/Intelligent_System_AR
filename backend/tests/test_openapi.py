@@ -1,5 +1,6 @@
 from app.main import create_app
 from app.presentation import schemas
+from app.presentation import field_schemas
 from app.presentation.openapi import OPERATIONS, SCHEMA_EXAMPLES
 
 
@@ -32,7 +33,7 @@ def test_openapi_operations_have_russian_guide_examples_and_security():
 
 def test_documented_schema_examples_pass_real_http_validation():
     for name, value in SCHEMA_EXAMPLES.items():
-        model = getattr(schemas, name)
+        model = getattr(schemas, name, None) or getattr(field_schemas, name)
         model.model_validate(value)
     schema = create_app().openapi()
     for path,item in schema["paths"].items():
@@ -40,9 +41,10 @@ def test_documented_schema_examples_pass_real_http_validation():
             for response in operation["responses"].values():
                 media = response.get("content", {}).get("application/json", {})
                 name = media.get("schema", {}).get("$ref", "").rsplit("/", 1)[-1]
-                if hasattr(schemas, name):
+                model = getattr(schemas, name, None) or getattr(field_schemas, name, None)
+                if model is not None:
                     for example in media.get("examples", {}).values():
-                        getattr(schemas, name).model_validate(example["value"])
+                        model.model_validate(example["value"])
     request = schema["paths"]["/api/v1/inspections"]["post"]["requestBody"]["content"]["multipart/form-data"]["schema"]
     assert request["properties"]["image"]["format"] == "binary"
     assert "EXIF" in request["properties"]["image"]["description"]

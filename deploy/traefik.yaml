@@ -1,7 +1,7 @@
 http:
   routers:
     industrial-vision-upload:
-      rule: Host(`pet.oppennec.ru`) && Method(`POST`) && (Path(`/industrial-vision/api/v1/inspections`) || Path(`/industrial-vision/api/v1/inspections/preview`))
+      rule: Host(`pet.oppennec.ru`) && Method(`POST`) && (Path(`/industrial-vision/api/v1/inspections`) || Path(`/industrial-vision/api/v1/inspections/preview`) || PathRegexp(`^/industrial-vision/api/v1/inspections/[0-9]+/photo$`))
       priority: 110
       entryPoints: [websecure]
       middlewares: [industrial-vision-limit, industrial-vision-upload-concurrency, industrial-vision-upload-body]

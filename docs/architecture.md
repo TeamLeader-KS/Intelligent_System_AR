@@ -1,6 +1,8 @@
 # Архитектура Industrial Vision
 
 Backend: presentation → dependency factory → application/use_case → Protocol-port → infrastructure/repository (команды) или infrastructure/queries → frozen DTO (чтения).
+
+Мобильный сценарий: FieldServiceUseCase принимает результаты модели Android, проверяет зарегистрированный по SHA-256 контракт классов и записывает их через существующий жизненный цикл осмотра. Фото прикрепляется автором отдельно; исходный ответ повтора не меняется. PostgresFieldServiceRepository хранит неизменяемые контракты моделей, компоненты и события обслуживания. Нормативный расчёт ресурса и правила интерпретации находок находятся в domain/field_inspections. Старый серверный mock-анализ остаётся отдельным совместимым сценарием. Локальная установка использует compose.local.yaml без внешнего proxy и с внутренним файловым хранилищем.
 Domain/application не импортируют FastAPI, Pydantic или SQLAlchemy. ORM и транзакции портовых операций — в infrastructure; HTTP-схемы и права — в presentation. Сессии и токены отделены от HTTP. AuthService получает AuthStore/Passwords через конструктор.
 
 Frontend: app → domain ← data. Компоненты получают CabinetRepository через контекст; только app/composition создаёт HttpCabinetRepository. Domain содержит модели и контракт, data — fetch и сериализацию.

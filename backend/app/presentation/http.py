@@ -23,7 +23,10 @@ from fastapi.exception_handlers import http_exception_handler
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.concurrency import run_in_threadpool
 from app.domain.errors import AnalysisError
-from .uploads import read_photo, PREVIEW_REQUEST_SCHEMA
+from .uploads import read_photo, read_evidence, PREVIEW_REQUEST_SCHEMA
+from .field_schemas import (NewMobileModel, NewDeviceInspection, NewComponent, NewComponentWork,
+                            EquipmentDigitalCard, ComponentOut, ComponentWorkOut, WorkHistoryOut,
+                            PhotoAttachedOut, DeviceInspectionOut)
 from .schemas import PreviewOut
 from .schemas import InspectionOut, HistoryOut
 from .schemas import NewReport, ReportOut, NotificationOut, NotificationsOut, NotificationUpdate
@@ -138,6 +141,58 @@ def create_app(url: str | None = None, *, secure: bool | None = None, origin: st
 
     Admin = Annotated[Account, Depends(administrator)]
     Member = Annotated[Account, Depends(principal)]
+
+    def write_source(request: Request):
+        if getattr(request.state, "renewed_cookie", None):
+            csrf(request)
+
+    def repeat_key(value: str | None) -> str:
+        try:
+            return str(UUID(value or ""))
+        except ValueError:
+            raise AnalysisError("VALIDATION_ERROR", "Нужен Idempotency-Key в формате UUID") from None
+
+    @app.post("/api/v1/mobile-models", response_model=NewMobileModel, status_code=201, dependencies=[Depends(csrf)])
+    def register_mobile_model(body: NewMobileModel, request: Request, user: Admin):
+        return request.app.state.services.field_service.register_model(body.model_dump(mode="json"), user)
+
+    @app.post("/api/v1/inspections/mobile", response_model=DeviceInspectionOut, status_code=201)
+    def device_inspection(body: NewDeviceInspection, request: Request, user: Member,
+                          idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None):
+        write_source(request)
+        result = request.app.state.services.field_service.mobile_inspection(
+            body.model_dump(mode="json"), repeat_key(idempotency_key), user)
+        return JSONResponse(result.body, status_code=result.status)
+
+    @app.post("/api/v1/inspections/{inspection_id}/photo", response_model=PhotoAttachedOut)
+    async def device_photo(inspection_id: int, request: Request, user: Member):
+        write_source(request)
+        content = await read_evidence(request)
+        result = await run_in_threadpool(request.app.state.services.field_service.attach_photo, inspection_id, content, user)
+        return JSONResponse(result)
+
+    @app.get("/api/v1/equipment/resolve", response_model=EquipmentDigitalCard)
+    def resolve_qr(request: Request, user: Member, code: Annotated[str, Query(min_length=1, max_length=80)]):
+        return request.app.state.services.field_service.resolve(code, user)
+
+    @app.get("/api/v1/equipment/{equipment_id}/card", response_model=EquipmentDigitalCard)
+    def digital_card(equipment_id: int, request: Request, user: Member):
+        return request.app.state.services.field_service.card(equipment_id, user)
+
+    @app.post("/api/v1/equipment/{equipment_id}/components", response_model=ComponentOut, status_code=201, dependencies=[Depends(csrf)])
+    def add_component(equipment_id: int, body: NewComponent, request: Request, user: Admin):
+        return request.app.state.services.field_service.add_component(equipment_id, body.model_dump(mode="json"), user)
+
+    @app.post("/api/v1/components/{component_id}/work", response_model=ComponentWorkOut, status_code=201)
+    def component_work(component_id: int, body: NewComponentWork, request: Request, user: Member,
+                       idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None):
+        write_source(request)
+        return request.app.state.services.field_service.record_work(component_id, body.model_dump(mode="json"), repeat_key(idempotency_key), user)
+
+    @app.get("/api/v1/components/{component_id}/work", response_model=WorkHistoryOut)
+    def work_history(component_id: int, request: Request, user: Member,
+                     limit: Annotated[int, Query(ge=1, le=100)] = 20, offset: Annotated[int, Query(ge=0)] = 0):
+        return request.app.state.services.field_service.work_history(component_id, user, limit, offset)
 
     def do_login(request, body):
         try:

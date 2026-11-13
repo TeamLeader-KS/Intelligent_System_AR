@@ -1,5 +1,5 @@
-from datetime import datetime
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, func, UniqueConstraint, CheckConstraint, Index
+from datetime import date, datetime
+from sqlalchemy import Boolean, Date, DateTime, Double, ForeignKey, Integer, String, Text, func, UniqueConstraint, CheckConstraint, Index
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -41,6 +41,51 @@ class DefectType(Base):
     name: Mapped[str] = mapped_column(String(120), unique=True)
     status: Mapped[str] = mapped_column(String(16))
     recommendation: Mapped[str] = mapped_column(Text)
+
+
+class MobileModel(Base):
+    __tablename__ = "mobile_models"
+    __table_args__ = (CheckConstraint("threshold >= 0 AND threshold < 1", name="ck_mobile_threshold"),)
+    sha256: Mapped[str] = mapped_column(String(64), primary_key=True)
+    version: Mapped[str] = mapped_column(String(160))
+    threshold: Mapped[float] = mapped_column(Double)
+    labels: Mapped[list] = mapped_column(JSONB)
+
+
+class EquipmentComponent(Base):
+    __tablename__ = "equipment_components"
+    __table_args__ = (
+        CheckConstraint("lifetime_days > 0 AND lifetime_hours > 0 AND lifetime_cycles > 0 AND service_interval_hours > 0", name="ck_component_norms"),
+        CheckConstraint("operating_hours >= 0 AND operating_cycles >= 0 AND last_service_hours >= 0 AND last_service_hours <= operating_hours", name="ck_component_usage"),
+    )
+    id: Mapped[int] = mapped_column(primary_key=True)
+    equipment_id: Mapped[int] = mapped_column(ForeignKey("equipment.id"), index=True)
+    name: Mapped[str] = mapped_column(String(160))
+    model: Mapped[str] = mapped_column(String(160))
+    specifications: Mapped[list] = mapped_column(JSONB)
+    installed_on: Mapped[date | None] = mapped_column(Date)
+    lifetime_days: Mapped[int | None] = mapped_column(Integer)
+    lifetime_hours: Mapped[float | None] = mapped_column(Double)
+    lifetime_cycles: Mapped[int | None] = mapped_column(Integer)
+    operating_hours: Mapped[float | None] = mapped_column(Double)
+    operating_cycles: Mapped[int | None] = mapped_column(Integer)
+    service_interval_hours: Mapped[float | None] = mapped_column(Double)
+    last_service_hours: Mapped[float | None] = mapped_column(Double)
+    last_serviced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_event_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    revision: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class ComponentWork(Base):
+    __tablename__ = "component_work"
+    __table_args__ = (UniqueConstraint("author_id", "component_id", "key", name="uq_component_work_key"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    component_id: Mapped[int] = mapped_column(ForeignKey("equipment_components.id"), index=True)
+    author_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    workshop_id: Mapped[int] = mapped_column(ForeignKey("workshops.id"))
+    key: Mapped[str] = mapped_column(String(36))
+    request_hash: Mapped[str] = mapped_column(String(64))
+    body: Mapped[dict] = mapped_column(JSONB)
 
 class BrowserSession(Base):
     __tablename__ = "browser_sessions"

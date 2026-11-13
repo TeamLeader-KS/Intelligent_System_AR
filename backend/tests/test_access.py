@@ -24,7 +24,7 @@ def client(monkeypatch, tmp_path):
     with TestClient(create_app(url,secure=False,origin="http://testserver"),base_url="http://testserver") as client:
         engine=make_engine(url)
         with engine.begin() as conn:
-            conn.execute(text("TRUNCATE audit_logs, api_keys, browser_sessions, login_attempts, equipment, users, defect_types, equipment_types, workshops RESTART IDENTITY CASCADE"))
+            conn.execute(text("TRUNCATE mobile_models, audit_logs, api_keys, browser_sessions, login_attempts, equipment, users, defect_types, equipment_types, workshops RESTART IDENTITY CASCADE"))
         repo=Repository(sessions(engine))
         repo.create_user({"login":"admin","full_name":"Test admin","role":"ADMIN","password_hash":Passwords().hash(PASSWORD),"workshop_id":None,"active":True})
         yield client

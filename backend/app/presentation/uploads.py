@@ -16,7 +16,7 @@ class PreviewForm(BaseModel):
     source: Literal["CAMERA", "GALLERY"]
 
 
-async def read_photo(request: Request) -> tuple[PreviewForm, bytes]:
+async def bounded_photo_request(request: Request) -> Request:
     if request.headers.get("content-type", "").split(";", 1)[0].strip().lower() != "multipart/form-data":
         raise AnalysisError("VALIDATION_ERROR", "Ожидается multipart/form-data")
     # Bound the actual stream, including chunked requests, before multipart parsing.
@@ -29,7 +29,11 @@ async def read_photo(request: Request) -> tuple[PreviewForm, bytes]:
     async def receive():
         return {"type":"http.request", "body":bytes(body), "more_body":False}
 
-    bounded_request = Request(request.scope, receive)
+    return Request(request.scope, receive)
+
+
+async def read_photo(request: Request) -> tuple[PreviewForm, bytes]:
+    bounded_request = await bounded_photo_request(request)
     try:
         async with bounded_request.form(max_files=1, max_fields=2, max_part_size=64 * 1024) as form:
             if len(form.multi_items()) != 3 or set(form) != {"equipment_id", "source", "image"}:
@@ -44,6 +48,20 @@ async def read_photo(request: Request) -> tuple[PreviewForm, bytes]:
             if len(content) > MAX_IMAGE_BYTES:
                 raise AnalysisError("IMAGE_TOO_LARGE", "Фотография превышает 10 МиБ")
             return fields, content
+    except (HTTPException, ValidationError, MultipartParseError):
+        raise AnalysisError("VALIDATION_ERROR", "Некорректная multipart-загрузка") from None
+
+
+async def read_evidence(request: Request) -> bytes:
+    bounded_request = await bounded_photo_request(request)
+    try:
+        async with bounded_request.form(max_files=1, max_fields=0, max_part_size=64 * 1024) as form:
+            if len(form.multi_items()) != 1 or set(form) != {"image"} or not isinstance(form["image"], UploadFile):
+                raise AnalysisError("VALIDATION_ERROR", "Нужен один файл image")
+            content = await form["image"].read(MAX_IMAGE_BYTES + 1)
+            if len(content) > MAX_IMAGE_BYTES:
+                raise AnalysisError("IMAGE_TOO_LARGE", "Фотография превышает 10 МиБ")
+            return content
     except (HTTPException, ValidationError, MultipartParseError):
         raise AnalysisError("VALIDATION_ERROR", "Некорректная multipart-загрузка") from None
 

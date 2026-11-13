@@ -3,8 +3,9 @@ from copy import deepcopy
 from app.application.auth import SESSION_TTL_SECONDS
 
 API_DESCRIPTION = """
-API осмотров промышленного оборудования. **Модель ИИ пока не подключена.**
-Новые снимки анализируются только при явно включённом `MOCK`; демонстрационные результаты не являются распознаванием.
+API осмотров промышленного оборудования. Модель запускается офлайн в Android,
+а сервер принимает результаты через `/inspections/mobile` после регистрации контракта модели администратором.
+Старые маршруты анализа снимков сохраняют явно включаемый `MOCK`; это не настоящее распознавание.
 
 ### Как начать с Android
 1. Получите логин и пароль у администратора.
@@ -48,6 +49,14 @@ TAGS = [
 ]
 
 OPERATIONS = {
+    ("post", "/api/v1/mobile-models"):("Справочники", "Зарегистрировать контракт модели Android", "Только администратор: SHA-256 файла, версия, полный подтверждённый порядок классов и порог отображения. Контракт неизменяем; class_id не считается каталоговым ID дефекта. NORMAL и UNKNOWN никогда не превращаются в неисправность. Повторный SHA даёт конфликт."),
+    ("post", "/api/v1/inspections/mobile"):("Осмотры", "Сохранить результат модели с телефона", "Модель запускается на Android без интернета. Передайте equipment_id из QR-разрешения, SHA-256 зарегистрированной модели, captured_at с часовым поясом, размеры исходного кадра и список defects. Рамки нормализованы [xmin,ymin,xmax,ymax] относительно исходного кадра после поворота, а не letterbox 640x640. Порог применяется строго через >; confidence не задаёт критичность. Сохраняются все находки, фотография загружается отдельно, поэтому photo_id сначала null. Нужен UUID Idempotency-Key. Показания telemetry сохраняются как сообщения клиента, а не измерения камеры; автоматических диагнозов по ним нет."),
+    ("post", "/api/v1/inspections/{inspection_id}/photo"):("Осмотры", "Прикрепить снимок мобильного осмотра", "Только автор доступного мобильного осмотра. Multipart с одним файлом image, JPEG/PNG до 10 МиБ. Размеры после EXIF должны совпасть с исходным кадром осмотра. Идентичный нормализованный снимок допускает повтор; замена другим запрещена. Исходный ответ создания осмотра при повторе остаётся неизменным, GET осмотра возвращает актуальный photo_id."),
+    ("get", "/api/v1/equipment/resolve"):("Оборудование", "Найти карточку по QR-коду", "QR содержит точный inventory_number, например pump_001. Возвращает расширенную карточку с компонентами и нормативной оценкой ресурса. Интернет не нужен: телефон обращается к серверу локальной сети. Чужой и несуществующий код дают одинаковый 404."),
+    ("get", "/api/v1/equipment/{equipment_id}/card"):("Оборудование", "Получить компоненты и расчёт ресурса", "Карточка оборудования содержит компоненты, параметры с единицами и нормами, даты установки и обслуживания. Оценка ресурса отдельно по дням, часам и циклам; неизвестные значения остаются null. Это нормативный расчёт, а не прогноз поломки по фотографии."),
+    ("post", "/api/v1/equipment/{equipment_id}/components"):("Оборудование", "Добавить компонент оборудования", "Только администратор. Укажите паспортные нормы, дату установки и известную наработку. Не выдумывайте отсутствующие значения: без исходных данных расчёт вернёт INSUFFICIENT_DATA. Последнее обслуживание в часах не может превышать текущую наработку."),
+    ("post", "/api/v1/components/{component_id}/work"):("Проверка инженером", "Записать осмотр, обслуживание или замену", "Мастер, инженер или администратор записывает INSPECTED, SERVICED, REPLACED либо READINGS с комментарием, временем и expected_revision из карточки. Нужен Idempotency-Key. При замене наработка нового компонента сбрасывается, старые данные остаются в истории. Устаревшая revision даёт COMPONENT_CONFLICT. Запись работ не закрывает существующую проблему автоматически."),
+    ("get", "/api/v1/components/{component_id}/work"):("Оборудование", "Получить историю работ по компоненту", "История доступна сотрудникам текущего цеха оборудования; сохранённый цех события тоже проверяется. События добавляются без перезаписи, содержат автора, время получения сервером, состояние до и после. Пагинация limit/offset, новые записи первыми."),
     ("post", "/api/v1/auth/login"):("Авторизация", "Войти в кабинет администратора", "Проверяет логин и пароль администратора и устанавливает HttpOnly/Secure/SameSite=Strict cookie на 24 часа. Возвращает профиль, а не Bearer-токен. Обычный сотрудник получает 403. После пяти неверных паролей вход ограничивается на пять минут."),
     ("post", "/api/v1/auth/token"):("Авторизация", "Получить токен для Android или API", "Доступно без предварительного входа. Возвращает access_token, тип bearer, expires_in в секундах и профиль. Сохраняйте токен на устройстве, передавайте Authorization: Bearer <токен>. Это непрозрачный токен, его не нужно декодировать как JWT. Автоматическое продление сохраняет значение токена."),
     ("post", "/api/v1/auth/logout"):("Авторизация", "Завершить браузерный вход", "Удаляет текущую cookie-сессию на сервере и в браузере. Bearer-токен Android эта операция не отзывает. Нужны браузерные заголовки. Ответ без тела."),
@@ -128,6 +137,42 @@ DEMO_WARNING = {**INSPECTION,"status":"WARNING","color":"ORANGE","defect_id":2,"
                 "defect":"Недокручен","reason":"Синтетический пример MOCK для документации, не результат распознавания.",
                 "recommendation":"На демонстрационном макете проверить крепление."}
 REVIEWED_WARNING = {**DEMO_WARNING,"review_status":"CONFIRMED","latest_review":REVIEW,"original_result":DEMO_WARNING}
+
+MOBILE_MODEL = {"sha256":"a" * 64, "version":"example-contract-v1", "threshold":0.4,
+                "labels":[{"class_id":0,"name":"Без коррозии","kind":"NORMAL","defect_type_id":None},
+                          {"class_id":1,"name":"Ржавчина","kind":"DEFECT","defect_type_id":2}]}
+COMPONENT_INPUT = {"name":"Корпус насоса", "model":"Учебный образец", "specifications":[],
+                   "installed_on":"2026-01-01", "lifetime_days":None, "lifetime_hours":1000,
+                   "lifetime_cycles":None, "operating_hours":100, "operating_cycles":None,
+                   "service_interval_hours":200, "last_service_hours":0}
+COMPONENT = {**COMPONENT_INPUT,"id":41,"equipment_id":125,"revision":0,"last_serviced_at":None,"last_event_at":None}
+RESOURCE = {"basis":"NORMATIVE", "status":"WITHIN_NORM",
+            "estimates":{"hours":{"norm":1000,"used":100,"remaining":900},
+                         "days":{"norm":None,"used":314,"remaining":None},
+                         "cycles":{"norm":None,"used":None,"remaining":None}},
+            "service_remaining_hours":100,"service_due":False,
+            "limitations":"Нормативный расчёт, не прогноз фактического отказа."}
+COMPONENT_WORK_INPUT = {"action":"INSPECTED", "occurred_at":"2026-11-11T09:00:00Z", "expected_revision":0,
+                        "comment":"Поверхность осмотрена", "operating_hours":100,"operating_cycles":None}
+COMPONENT_WORK = {**COMPONENT_WORK_INPUT,"work_id":11,"component_id":41,"equipment_id":125,"author_id":9,
+                  "recorded_at":"2026-11-11T09:01:00Z","before":COMPONENT,
+                  "after":{**COMPONENT,"revision":1,"last_event_at":"2026-11-11T09:00:00Z"},"resource":RESOURCE}
+DEVICE_INPUT = {"equipment_id":125,"component_id":41,"source":"CAMERA","captured_at":"2026-11-11T09:00:00Z",
+                "model_sha256":"a" * 64,"image":{"width":1280,"height":720},
+                "defects":[{"class_id":1,"confidence":0.8,"box":[0.1,0.2,0.4,0.6]}],"telemetry":[]}
+DEVICE_RESULT = {**INSPECTION,"photo_id":None,"component_id":41,"image":DEVICE_INPUT["image"],
+                 "status":"WARNING","color":"ORANGE","analysis_source":"MODEL","analysis_location":"ANDROID",
+                 "model_version":MOBILE_MODEL["version"],"model_sha256":"a" * 64,
+                 "captured_at":DEVICE_INPUT["captured_at"],"threshold":0.4,"defect_id":2,"defect_code":"1",
+                 "defect":"Ржавчина","confidence":0.8,"box":[128,144,512,432],"telemetry":[],"telemetry_source":"CLIENT_REPORTED",
+                 "detections":[{**DEVICE_INPUT["defects"][0],"class_name":"Ржавчина","kind":"DEFECT","defect_id":2,"accepted":True}]}
+SCHEMA_EXAMPLES.update({
+    "NewMobileModel":MOBILE_MODEL,"NewDeviceInspection":DEVICE_INPUT,"NewComponent":COMPONENT_INPUT,
+    "NewComponentWork":COMPONENT_WORK_INPUT,"DeviceInspectionOut":DEVICE_RESULT,
+    "ComponentOut":COMPONENT,"ComponentWorkOut":COMPONENT_WORK,"PhotoAttachedOut":{"photo_id":501},
+    "EquipmentDigitalCard":{**EQUIPMENT,"qr_code":"DEMO-125","components":[{**COMPONENT,"resource":RESOURCE}]},
+    "WorkHistoryOut":{"items":[COMPONENT_WORK],"total":1,"limit":20,"offset":0},
+})
 
 FIELD_DESCRIPTIONS = {
     "id":"Идентификатор записи, назначенный сервером.", "login":"Логин: латинские буквы, цифры, _, точка и дефис. Уникален.",
@@ -282,6 +327,13 @@ def enrich_schema(schema: dict) -> None:
                     errors[409] = ["REQUEST_IN_PROGRESS"]
             if method == "post" and tag in ("Сообщения", "Проверка инженером", "Проблемы"):
                 errors[409] = ["IDEMPOTENCY_CONFLICT","REQUEST_IN_PROGRESS"] + ({"Сообщения":["REPORT_NOT_APPLICABLE"],"Проверка инженером":["REVIEW_CONFLICT","REVIEW_NOT_APPLICABLE"],"Проблемы":["ISSUE_CONFLICT","ISSUE_NOT_VERIFIED","ISSUE_ALREADY_CLOSED"]}[tag])
+            if path == "/api/v1/inspections/mobile":
+                errors[409] = ["IDEMPOTENCY_CONFLICT", "REQUEST_IN_PROGRESS"]
+            if path.endswith("/photo"):
+                errors.update({404:["NOT_FOUND"], 409:["IDEMPOTENCY_CONFLICT"], 413:["IMAGE_TOO_LARGE"],
+                               415:["UNSUPPORTED_IMAGE_TYPE"], 503:["STORAGE_UNAVAILABLE"]})
+            if path == "/api/v1/components/{component_id}/work" and method == "post":
+                errors[409] = ["COMPONENT_CONFLICT", "IDEMPOTENCY_CONFLICT"]
             for code, names in errors.items():
                 if path == "/api/v1/auth/token" and code == 403 or path == "/api/v1/auth/logout" and code in (401,422):
                     continue

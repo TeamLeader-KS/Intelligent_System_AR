@@ -116,9 +116,17 @@ class InspectionOut(PreviewOut):
     box: tuple[int, int, int, int] | None
     confidence: float | None = Field(ge=0, le=1)
     inspection_id: int
-    photo_id: int
+    photo_id: int | None
     author_id: int
     workshop_id: int
+    analysis_location: Literal["ANDROID"] | None = None
+    model_sha256: str | None = None
+    captured_at: datetime | None = None
+    component_id: int | None = None
+    threshold: float | None = None
+    detections: list[dict] | None = None
+    telemetry: list[dict] | None = None
+    telemetry_source: Literal["CLIENT_REPORTED"] | None = None
 
 
 class ReviewOut(BaseModel):
