@@ -28,6 +28,7 @@ class NewEquipment(BaseModel):
     workshop_id: int = Field(gt=0)
     type_id: int = Field(gt=0)
     passport: str = Field(default="", max_length=10000)
+    serial_number: str | None = Field(default=None, min_length=1, max_length=120)
 
 
 class NewDefect(Named):
@@ -132,6 +133,12 @@ class InspectionOut(PreviewOut):
     detections: list[dict] | None = None
     telemetry: list[dict] | None = None
     telemetry_source: Literal["CLIENT_REPORTED"] | None = None
+    visual_checks: list[dict] | None = None
+    comment: str | None = None
+    diagnostics: list[dict] | None = None
+    component_resource: dict | None = None
+    diagnostic_limitations: str | None = None
+    ignored_readings: list[str] | None = None
 
 
 class ReviewOut(BaseModel):

@@ -17,6 +17,14 @@ import com.example.intelligent_system_ar.data.ml.*
 import java.io.IOException
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
+import java.io.ByteArrayOutputStream
+import java.time.Instant
+import android.view.MotionEvent
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.text.TextRecognition
+import com.google.mlkit.vision.text.TextRecognizer
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 
 data class LiveCameraStatus(
     val ready: Boolean = false,
@@ -26,12 +34,15 @@ data class LiveCameraStatus(
     val error: Boolean = false
 )
 
-class LiveCameraPreview(context: Context, private val onStatus: (LiveCameraStatus) -> Unit) : FrameLayout(context) {
+class LiveCameraPreview(context: Context, private val onStatus: (LiveCameraStatus) -> Unit,
+                        onFindingTap: () -> Unit = {}, private val onInventoryCode: (String) -> Unit = {},
+                        private val onNameplate: (List<String>,String?) -> Unit = {_,_->}) : FrameLayout(context) {
     private val previewView = PreviewView(context).apply {
         implementationMode = PreviewView.ImplementationMode.COMPATIBLE
         scaleType = PreviewView.ScaleType.FIT_CENTER
     }
-    private val overlay = DetectionOverlay(context)
+    private val overlay = DetectionOverlay(context, onFindingTap)
+    private val capture = AtomicReference<((CapturedInspection) -> Unit)?>(null)
     private val worker = Executors.newSingleThreadExecutor()
     private val active = AtomicBoolean(true)
     private val enabled = AtomicBoolean(true)
@@ -41,6 +52,12 @@ class LiveCameraPreview(context: Context, private val onStatus: (LiveCameraStatu
     private var preview: Preview? = null
     private var analysis: ImageAnalysis? = null
     private var lastFrame = 0L
+    private val qrDecoder=InventoryQrDecoder()
+    private val scanQr=AtomicBoolean(true)
+    private var lastQrFrame=0L
+    private val ocrRequested=AtomicBoolean(false)
+    private val ocrBusy=AtomicBoolean(false)
+    private var textRecognizer: TextRecognizer?=null // initialized and closed on worker
 
     init {
         addView(previewView, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
@@ -92,6 +109,37 @@ class LiveCameraPreview(context: Context, private val onStatus: (LiveCameraStatu
     }
 
     fun clear() { overlay.show(emptyList()) }
+    fun startQrScan() { scanQr.set(true) }
+    fun readNameplate(): Boolean {
+        if(!active.get() || !enabled.get() || failed.get() || !ocrBusy.compareAndSet(false,true)) return false
+        scanQr.set(false)
+        ocrRequested.set(true)
+        return true
+    }
+
+    private fun recognizeNameplate(image: Bitmap) {
+        val copy=image.copy(Bitmap.Config.ARGB_8888,false)
+        try {
+            val recognizer=textRecognizer ?: TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS).also { textRecognizer=it }
+            recognizer.process(InputImage.fromBitmap(copy,0))
+                .addOnSuccessListener { result ->
+                    if(active.get()) onNameplate(NameplateCandidates.extract(result.text),null)
+                }
+                .addOnFailureListener {
+                    if(active.get()) onNameplate(emptyList(),"Не удалось прочитать шильдик. Наведите камеру ближе или введите номер вручную.")
+                }
+                .addOnCompleteListener { copy.recycle(); ocrBusy.set(false) }
+        } catch (e: RuntimeException) {
+            copy.recycle()
+            ocrBusy.set(false)
+            post { if(active.get()) onNameplate(emptyList(),"OCR недоступен. Введите маркировку вручную.") }
+        }
+    }
+
+    fun captureNextFrame(callback: (CapturedInspection) -> Unit): Boolean {
+        if (!active.get() || !enabled.get() || failed.get()) return false
+        return capture.compareAndSet(null, callback)
+    }
 
     private fun analyze(frame: ImageProxy) {
         val model = detector
@@ -116,13 +164,30 @@ class LiveCameraPreview(context: Context, private val onStatus: (LiveCameraStatu
             val image = if (rotation == 0) rawImage else Bitmap.createBitmap(rawImage,0,0,rawImage.width,rawImage.height,
                 Matrix().apply { postRotate(rotation.toFloat()) },true)
             upright = image
+            val capturedAt = Instant.now().toString()
+            if(ocrRequested.getAndSet(false)) recognizeNameplate(image)
+            val qrCode=if(scanQr.get() && SystemClock.elapsedRealtime()-lastQrFrame>1000) {
+                lastQrFrame=SystemClock.elapsedRealtime()
+                val pixels=IntArray(image.width*image.height)
+                image.getPixels(pixels,0,image.width,0,0,image.width,image.height)
+                qrDecoder.decode(image.width,image.height,pixels)
+            } else null
+            if(qrCode != null) scanQr.set(false)
             val findings = model.detect(image)
+            val captureCallback = capture.getAndSet(null)
+            val snapshot = if (captureCallback != null) {
+                val bytes = ByteArrayOutputStream()
+                check(image.compress(Bitmap.CompressFormat.JPEG,92,bytes)) { "Не удалось сохранить снимок" }
+                CapturedInspection(bytes.toByteArray(),image.width,image.height,capturedAt,findings)
+            } else null
             val boxes = findings.map { detection ->
                 val box = YoloPostprocessor.toBuffer(detection.box,rotation)
                 detection to RectF(box.left*rawWidth,box.top*rawHeight,box.right*rawWidth,box.bottom*rawHeight)
             }
             val elapsed = SystemClock.elapsedRealtime()-started
             post {
+                if (active.get() && snapshot != null) captureCallback?.invoke(snapshot)
+                if (active.get() && qrCode != null) onInventoryCode(qrCode)
                 if (!active.get() || !enabled.get()) return@post
                 val target = previewView.outputTransform
                 if (target != null) {
@@ -155,18 +220,27 @@ class LiveCameraPreview(context: Context, private val onStatus: (LiveCameraStatu
         analysis?.clearAnalyzer()
         val useCases = listOfNotNull(preview,analysis).toTypedArray()
         if (useCases.isNotEmpty()) provider?.unbind(*useCases)
-        worker.execute { detector?.close(); detector = null }
+        worker.execute { detector?.close(); detector = null; textRecognizer?.close(); textRecognizer=null }
         worker.shutdown()
+        capture.set(null)
         overlay.show(emptyList())
     }
 }
 
-private class DetectionOverlay(context: Context) : View(context) {
+private class DetectionOverlay(context: Context, private val onFindingTap: () -> Unit) : View(context) {
     private var findings: List<Pair<Detection,RectF>> = emptyList()
     private val line = Paint(Paint.ANTI_ALIAS_FLAG).apply { style=Paint.Style.STROKE; strokeWidth=3*resources.displayMetrics.density }
     private val text = Paint(Paint.ANTI_ALIAS_FLAG).apply { textSize=14*resources.displayMetrics.scaledDensity; color=Color.WHITE }
     private val background = Paint().apply { color=Color.argb(210,15,20,25) }
     fun show(value: List<Pair<Detection,RectF>>) { findings=value; invalidate() }
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        if (event.action == MotionEvent.ACTION_UP && findings.any { it.second.contains(event.x,event.y) }) {
+            performClick()
+            return true
+        }
+        return event.action == MotionEvent.ACTION_DOWN && findings.any { it.second.contains(event.x,event.y) }
+    }
+    override fun performClick(): Boolean { super.performClick(); onFindingTap(); return true }
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         findings.forEach { (finding,box) ->

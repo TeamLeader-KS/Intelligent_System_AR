@@ -26,7 +26,7 @@ from app.domain.errors import AnalysisError
 from .uploads import read_photo, read_evidence, PREVIEW_REQUEST_SCHEMA
 from .field_schemas import (NewMobileModel, NewDeviceInspection, NewComponent, NewComponentWork,
                             EquipmentDigitalCard, ComponentOut, ComponentWorkOut, WorkHistoryOut,
-                            PhotoAttachedOut, DeviceInspectionOut)
+                            PhotoAttachedOut, DeviceInspectionOut, NewDiagnosticPreview, DiagnosticPreviewOut)
 from .schemas import PreviewOut
 from .schemas import AndroidBuildOut
 from .schemas import InspectionOut, HistoryOut
@@ -35,6 +35,7 @@ from .schemas import NewReview, ReviewOut, ReviewsOut, CloseIssue, IssueOut, Ins
 from .schemas import MobileTokenOut, IdOut, HealthOut
 from .openapi import API_DESCRIPTION, TAGS, configure_openapi
 from app.application.dtos.inspections import ERROR_STATUS
+from app.infrastructure.inspection_export import render_inspection
 from fastapi import Query, Header
 from fastapi.exceptions import RequestValidationError
 from fastapi.exception_handlers import request_validation_exception_handler
@@ -173,7 +174,7 @@ def create_app(url: str | None = None, *, secure: bool | None = None, origin: st
         return JSONResponse(result)
 
     @app.get("/api/v1/equipment/resolve", response_model=EquipmentDigitalCard)
-    def resolve_qr(request: Request, user: Member, code: Annotated[str, Query(min_length=1, max_length=80)]):
+    def resolve_qr(request: Request, user: Member, code: Annotated[str, Query(min_length=1, max_length=120)]):
         return request.app.state.services.field_service.resolve(code, user)
 
     @app.get("/api/v1/equipment/{equipment_id}/card", response_model=EquipmentDigitalCard)
@@ -194,6 +195,23 @@ def create_app(url: str | None = None, *, secure: bool | None = None, origin: st
     def work_history(component_id: int, request: Request, user: Member,
                      limit: Annotated[int, Query(ge=1, le=100)] = 20, offset: Annotated[int, Query(ge=0)] = 0):
         return request.app.state.services.field_service.work_history(component_id, user, limit, offset)
+
+    @app.post("/api/v1/equipment/{equipment_id}/diagnostics/preview", response_model=DiagnosticPreviewOut)
+    def diagnostic_preview(equipment_id: int, body: NewDiagnosticPreview, request: Request, user: Member):
+        write_source(request)
+        return request.app.state.services.field_service.diagnosis(equipment_id, body.model_dump(mode="json"), user)
+
+    if os.getenv("LOCAL_DEMO_ENABLED") == "true":
+        @app.get("/api/v1/equipment/{equipment_id}/demo-scenarios", include_in_schema=False)
+        def demo_scenarios(equipment_id: int, request: Request, user: Member):
+            from app.domain.diagnostic_scenarios import pump_scenarios
+            card = request.app.state.services.field_service.card(equipment_id, user)
+            if card["inventory_number"] != "pump_demo_001":
+                raise AnalysisError("NOT_FOUND", "Сценарии доступны только для демонстрационного насоса")
+            component = next((c for c in card["components"] if any(s["name"] == "current_a" for s in c["specifications"])), None)
+            if component is None:
+                raise AnalysisError("NOT_FOUND", "Не подготовлены нормы демонстрационного компонента")
+            return {"synthetic": True, "component_id": component["id"], "scenarios": pump_scenarios()}
 
     def do_login(request, body):
         try:
@@ -264,6 +282,16 @@ def create_app(url: str | None = None, *, secure: bool | None = None, origin: st
     def inspection(inspection_id: int, request: Request, user: Member):
         result = request.app.state.services.inspections.get(inspection_id=inspection_id, actor=user)
         return JSONResponse(result.body, status_code=result.status)
+
+    @app.get("/api/v1/inspections/{inspection_id}/export")
+    def inspection_export(inspection_id: int, request: Request, user: Member,
+                          format: Literal["pdf", "xlsx"] = "pdf"):
+        result = request.app.state.services.inspections.get(inspection_id=inspection_id, actor=user)
+        if result.status != 200:
+            return JSONResponse(result.body, status_code=result.status)
+        content = render_inspection(result.body, format)
+        media = "application/pdf" if format == "pdf" else "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        return Response(content, media_type=media, headers={"Content-Disposition": f'attachment; filename="inspection-{inspection_id}.{format}"'})
 
     @app.get("/api/v1/photos/{photo_id}")
     def photo(photo_id: int, request: Request, user: Member):
@@ -384,6 +412,26 @@ def create_app(url: str | None = None, *, secure: bool | None = None, origin: st
     if apk_path:
         cv_example = os.getenv("CV_EXAMPLE_PATH")
         if cv_example:
+            @app.get("/demo-identifiers", response_class=HTMLResponse, include_in_schema=False)
+            def demo_identifiers_page():
+                from html import escape
+                prefix = escape(root_path or "", quote=True)
+                return HTMLResponse(f'''<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Демо: QR и шильдик</title><style>body{{font:18px system-ui;background:#edf1f4;color:#18232c;margin:0}}main{{max-width:1200px;margin:auto;padding:24px}}img{{display:block;max-width:100%;height:auto;margin:24px auto;background:white}}.qr{{width:min(65vh,520px)}}a{{color:#0058a0}}</style></head><body><main><h1>QR и шильдик демонстрационного насоса</h1><p>Это учебный макет, а не заводской паспорт. В приложении войдите как pump_engineer. Для QR выберите чтение QR; для таблички нажмите «Считать шильдик» и подтвердите номер.</p><h2>QR: pump_demo_001</h2><img class="qr" src="{prefix}/demo-qr.svg" alt="QR демонстрационного насоса"><h2>Шильдик: DEMO-PUMP-2026-001</h2><img src="{prefix}/demo-nameplate.svg" alt="Демонстрационная заводская табличка"><p>Маркировка не определяет состояние насоса. После идентификации откройте карточку компонента и выполните визуальный осмотр.</p><a href="{prefix}/cv-example">Пример поверхности для анализа камерой</a></main></body></html>''')
+
+            @app.get("/demo-qr.svg", include_in_schema=False)
+            def demo_qr_image():
+                path = Path(cv_example).with_name("pump-qr.svg")
+                if not path.is_file():
+                    raise HTTPException(404, "Макет QR не найден")
+                return FileResponse(path, media_type="image/svg+xml")
+
+            @app.get("/demo-nameplate.svg", include_in_schema=False)
+            def demo_nameplate_image():
+                path = Path(cv_example).with_name("nameplate.svg")
+                if not path.is_file():
+                    raise HTTPException(404, "Макет шильдика не найден")
+                return FileResponse(path, media_type="image/svg+xml")
+
             @app.get("/cv-example", response_class=HTMLResponse, include_in_schema=False)
             def cv_example_page():
                 from html import escape

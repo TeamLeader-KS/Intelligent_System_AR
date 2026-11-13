@@ -82,6 +82,9 @@ dependencies {
 
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
     implementation("com.squareup.retrofit2:converter-gson:2.11.0")
+    // Bundled offline QR decoding; no Play Services or network download on the phone.
+    implementation("com.google.zxing:core:3.5.3")
+    implementation("com.google.mlkit:text-recognition:16.0.1")
 
     // TensorFlow Lite
     implementation("org.tensorflow:tensorflow-lite:2.14.0")

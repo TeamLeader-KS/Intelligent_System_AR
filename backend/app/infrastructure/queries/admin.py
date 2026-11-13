@@ -12,7 +12,7 @@ class AdminQueries:
             query = query.where(Equipment.workshop_id == user.workshop_id)
         with self.sessions() as db:
             row = db.scalar(query)
-            return EquipmentRow(row.id, row.name, row.inventory_number, row.workshop_id, row.type_id, row.passport) if row else None
+            return EquipmentRow(row.id, row.name, row.inventory_number, row.workshop_id, row.type_id, row.passport, row.serial_number) if row else None
 
     def keys(self, user_id:int)->tuple[KeyRow,...]:
         with self.sessions() as db:

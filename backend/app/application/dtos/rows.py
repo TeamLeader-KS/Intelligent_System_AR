@@ -32,6 +32,7 @@ class EquipmentRow:
     workshop_id:int
     type_id:int
     passport:str
+    serial_number:str|None = None
 
 @dataclass(frozen=True)
 class DefectRow:

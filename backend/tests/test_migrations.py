@@ -24,11 +24,12 @@ def test_consolidated_schema_preserves_legacy_data(previous):
         cfg = Config()
         cfg.set_main_option("script_location",str(Path(__file__).resolve().parents[1]/"migrations"))
         head = ScriptDirectory.from_config(cfg).get_revision("head")
+        base = ScriptDirectory.from_config(cfg).get_revision("0001")
         if previous:
             with engine.begin() as conn:
                 with Operations.context(MigrationContext.configure(conn)):
                     for stage in range(1,(5 if previous == "0006_initial" else int(previous))+1):
-                        getattr(head.module,f"_stage_{stage}")()
+                        getattr(base.module,f"_stage_{stage}")()
                 conn.execute(text("CREATE TABLE alembic_version (version_num varchar(32) NOT NULL PRIMARY KEY)"))
                 conn.execute(text("INSERT INTO alembic_version VALUES (:v)"),{"v":previous})
                 conn.execute(text("INSERT INTO workshops (id,name) VALUES (101,'Сохранённый цех')"))

@@ -6,7 +6,11 @@ from uuid import uuid5, NAMESPACE_URL
 from PIL import Image
 from sqlalchemy import select
 from app.application.dtos.analysis import PreviewResult, ImageSize
-from .models import Workshop, EquipmentType, Equipment, EquipmentComponent, DefectType, User
+from .models import Workshop, EquipmentType, Equipment, EquipmentComponent, DefectType, User, MobileModel, ComponentWork
+from app.domain.diagnostic_scenarios import DEMO_SPECIFICATIONS
+from datetime import datetime, timedelta, timezone
+from .field_service import component_dict
+from app.domain.field_inspections import component_resource
 from .passwords import Passwords
 from .inspections import PostgresInspectionRepository
 from .photo_storage import photo_storages
@@ -18,7 +22,7 @@ DEMO_USERS = (("demo_worker", "ДЕМО · Рабочий", "WORKER", 1),
 
 
 def seed_pump_demo(session_factory, password: str, *, admin_password: str | None = None) -> dict:
-    """Synthetic equipment cards for the real LAN API; no model or inspections fabricated."""
+    """Synthetic cards, manual work history and the shipped model's declared class contract."""
     if not 12 <= len(password) <= 256:
         raise ValueError("Демонстрационный пароль: 12–256 символов")
     if admin_password is not None and not 12 <= len(admin_password) <= 256:
@@ -49,6 +53,8 @@ def seed_pump_demo(session_factory, password: str, *, admin_password: str | None
             db.flush()
         elif (pump.name, pump.workshop_id, pump.type_id) != ("ДЕМО · Центробежный насос", shop.id, typ.id):
             raise ValueError("Демонстрационный инвентарный номер уже занят другой записью")
+        if pump.serial_number is None:
+            pump.serial_number = "DEMO-PUMP-2026-001"
         users = {}
         for login, name, role in accounts:
             user = db.scalar(select(User).where(User.login == login))
@@ -82,11 +88,55 @@ def seed_pump_demo(session_factory, password: str, *, admin_password: str | None
         for name, model, specs in components:
             component = db.scalar(select(EquipmentComponent).where(EquipmentComponent.equipment_id == pump.id, EquipmentComponent.name == name))
             if component is None:
-                db.add(EquipmentComponent(equipment_id=pump.id, name=name, model=model,
+                component = EquipmentComponent(equipment_id=pump.id, name=name, model=model,
                     specifications=specs, operating_hours=3500, lifetime_hours=16000,
-                    service_interval_hours=4000, last_service_hours=0))
+                    service_interval_hours=4000, last_service_hours=0)
+                db.add(component)
+                db.flush()
+            if name == "ДЕМО · Подшипниковый узел":
+                existing_names = {item["name"] for item in component.specifications}
+                component.specifications = [*component.specifications, *(spec for spec in DEMO_SPECIFICATIONS if spec["name"] not in existing_names)]
+            if component.revision == 0 and component.last_event_at is None:
+                db.flush()
+                before = component_dict(component)
+                happened = datetime.now(timezone.utc) - timedelta(days=2)
+                component.revision = 1
+                component.last_event_at = happened
+                after = component_dict(component)
+                values = {"action": "INSPECTED", "occurred_at": happened.isoformat(), "expected_revision": 0,
+                          "comment": "ДЕМО: пример ручной записи проверки для демонстрации истории. Реальный осмотр не выполнялся.",
+                          "operating_hours": None, "operating_cycles": None}
+                event = ComponentWork(component_id=component.id, author_id=users["pump_engineer"], workshop_id=shop.id,
+                                      key=str(uuid5(NAMESPACE_URL, f"iv-demo-work-v1:{component.id}")),
+                                      request_hash=hashlib.sha256(f"demo:{component.id}".encode()).hexdigest(), body={})
+                db.add(event)
+                db.flush()
+                event.body = {**values, "work_id": event.id, "component_id": component.id, "equipment_id": pump.id,
+                              "author_id": users["pump_engineer"], "recorded_at": happened.isoformat(),
+                              "before": before, "after": after, "resource": component_resource(after, happened.date())}
+        label_names = ["Коричневая ржавчина", "Коррозия", "Щелевая коррозия", "Гальваническая коррозия",
+                       "Смешанная коррозия", "Без коррозии", "Точечная коррозия", "Ржавчина",
+                       "Коррозионное растрескивание", "Желтая ржавчина", "Ржавчина железа", "Красно-коричневая ржавчина",
+                       "Неизвестный класс 12"]
+        sha = "0c6ce9b3990dcfd9607a3bab073c66a42d4db882ae111676960dd59e6cf7b774"
+        profile = db.get(MobileModel, sha)
+        if profile is None:
+            labels = []
+            for index, name in enumerate(label_names):
+                kind = "NORMAL" if index == 5 else "UNKNOWN" if index == 12 else "DEFECT"
+                defect = None
+                if kind == "DEFECT":
+                    defect = db.scalar(select(DefectType).where(DefectType.name == name))
+                    if defect is None:
+                        defect = DefectType(name=name, status="WARNING", recommendation="Предварительный признак поверхности. Проверить узел по регламенту; состояние внутренних деталей не установлено.")
+                        db.add(defect)
+                        db.flush()
+                labels.append({"class_id": index, "name": name, "kind": kind, "defect_type_id": defect.id if defect else None})
+            db.add(MobileModel(sha256=sha, version="sofia-surface-v1-13ch-unknown12", threshold=.4, labels=labels))
+        elif len(profile.labels) != 13 or any(label["kind"] != ("NORMAL" if i == 5 else "UNKNOWN" if i == 12 else "DEFECT") for i, label in enumerate(profile.labels)):
+            raise ValueError("Существующий контракт модели несовместим с демонстрационной конфигурацией; он не изменён")
         return {"synthetic":True, "equipment_id":pump.id, "inventory_number":inventory,
-                "users":users, "note":"Условные параметры и нормативы; реальная модель не подключена. Пароли не выводятся."}
+                "users":users, "note":"Условные параметры и нормативы команды. Контракт модели зарегистрирован; класс 12 неизвестен. Результаты распознавания не сгенерированы. Пароли не выводятся."}
 
 
 def seed_demo(session_factory, password: str) -> dict:

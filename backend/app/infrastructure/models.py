@@ -34,6 +34,7 @@ class Equipment(Base):
     workshop_id: Mapped[int] = mapped_column(ForeignKey("workshops.id"), index=True)
     type_id: Mapped[int] = mapped_column(ForeignKey("equipment_types.id"))
     passport: Mapped[str] = mapped_column(Text, default="")
+    serial_number: Mapped[str | None] = mapped_column(String(120), index=True)
 
 class DefectType(Base):
     __tablename__ = "defect_types"
@@ -57,6 +58,7 @@ class EquipmentComponent(Base):
     __table_args__ = (
         CheckConstraint("lifetime_days > 0 AND lifetime_hours > 0 AND lifetime_cycles > 0 AND service_interval_hours > 0", name="ck_component_norms"),
         CheckConstraint("operating_hours >= 0 AND operating_cycles >= 0 AND last_service_hours >= 0 AND last_service_hours <= operating_hours", name="ck_component_usage"),
+        CheckConstraint("(runtime_state = 'STOPPED' AND run_started_at IS NULL) OR (runtime_state = 'RUNNING' AND run_started_at IS NOT NULL AND operating_hours IS NOT NULL)", name="ck_component_runtime"),
     )
     id: Mapped[int] = mapped_column(primary_key=True)
     equipment_id: Mapped[int] = mapped_column(ForeignKey("equipment.id"), index=True)
@@ -74,6 +76,8 @@ class EquipmentComponent(Base):
     last_serviced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_event_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     revision: Mapped[int] = mapped_column(Integer, default=0)
+    runtime_state: Mapped[str] = mapped_column(String(8), default="STOPPED", server_default="STOPPED")
+    run_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class ComponentWork(Base):

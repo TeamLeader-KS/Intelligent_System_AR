@@ -1,0 +1,50 @@
+{
+  "source": "https://github.com/aziz-hizem/spiderbot-rust-detection",
+  "revision": "d077206d805333b689637766287a6f80ec470946",
+  "weights_executed": false,
+  "apk_model_changed": false,
+  "candidates": [
+    {
+      "file": "v1_yolov8n.pt",
+      "bytes": 6246563,
+      "sha256": "23616c79be9487c96a4230c11285414b9377544320775c68843afee9b15f2cd4",
+      "task": "detect",
+      "classes": {
+        "0": "Corrosion"
+      },
+      "code_license": "MIT",
+      "dataset_license_reported_by_author": "CC BY 4.0",
+      "framework_license": "AGPL-3.0",
+      "status": "CANDIDATE_UNEVALUATED",
+      "limitations": [
+        "Single general corrosion class; no pitting-specific recognition",
+        "Not a pump-identification model",
+        "Author reports only nine validation images for this version",
+        "Current Android decoder expects 13 classes; not drop-in compatible"
+      ]
+    },
+    {
+      "file": "v2_yolo11n.pt",
+      "bytes": 5487187,
+      "sha256": "842fde6519a5b3c0c318eb3989edcf8188c668d53a4ebbf4c79dc8283d88afe7",
+      "task": "detect",
+      "classes": {
+        "0": "1",
+        "1": "2",
+        "2": "3",
+        "3": "4",
+        "4": "5",
+        "5": "6",
+        "6": "7",
+        "7": "8",
+        "8": "9",
+        "9": "9 0 0 0 1 1 1 1 0 0 0",
+        "10": "moderate corrosion",
+        "11": "rust",
+        "12": "severe corrosion"
+      },
+      "status": "REJECTED_CLASS_TAXONOMY",
+      "reason": "Class names contain numeric annotation-like strings and mix severity with defect types; do not deploy"
+    }
+  ]
+}

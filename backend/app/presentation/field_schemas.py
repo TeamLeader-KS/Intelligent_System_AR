@@ -70,6 +70,26 @@ class SensorReading(StrictBody):
     source: Literal["SENSOR", "MANUAL", "DEMO"]
 
 
+class VisualCheck(StrictBody):
+    code: Literal["SEAL_LEAK", "FRAME_CORROSION", "LOOSE_ANCHOR", "OIL_DARK", "OIL_LOW", "TERMINAL_OXIDATION", "COUPLING_GUARD_MISSING"]
+    observed: bool
+    source: Literal["MANUAL"] = "MANUAL"
+
+
+class NewDiagnosticPreview(StrictBody):
+    component_id: int = Field(gt=0, strict=True)
+    captured_at: AwareDatetime
+    telemetry: list[SensorReading] = Field(default_factory=list, max_length=50)
+    visual_checks: list[VisualCheck] = Field(default_factory=list, max_length=7)
+
+    @field_validator("captured_at")
+    @classmethod
+    def capture_time(cls, value):
+        if value > datetime.now(timezone.utc) + timedelta(minutes=5):
+            raise ValueError("Время в будущем")
+        return value.astimezone(timezone.utc)
+
+
 class NewDeviceInspection(StrictBody):
     equipment_id: int = Field(gt=0, strict=True)
     component_id: int | None = Field(default=None, gt=0, strict=True)
@@ -79,6 +99,8 @@ class NewDeviceInspection(StrictBody):
     image: FrameSize
     defects: list[DeviceFinding] = Field(max_length=100)
     telemetry: list[SensorReading] = Field(default_factory=list, max_length=50)
+    visual_checks: list[VisualCheck] = Field(default_factory=list, max_length=7)
+    comment: str = Field(default="", max_length=2000)
 
     @field_validator("captured_at")
     @classmethod
@@ -126,7 +148,7 @@ class NewComponent(StrictBody):
 
 
 class NewComponentWork(StrictBody):
-    action: Literal["INSPECTED", "SERVICED", "REPLACED", "READINGS"]
+    action: Literal["INSPECTED", "SERVICED", "REPLACED", "READINGS", "STARTED", "STOPPED"]
     occurred_at: AwareDatetime
     expected_revision: int = Field(ge=0, strict=True)
     comment: str = Field(min_length=1, max_length=2000, pattern=r"\S")
@@ -164,6 +186,8 @@ class ComponentOut(NewComponent):
     revision: int
     last_serviced_at: AwareDatetime | None
     last_event_at: AwareDatetime | None
+    runtime_state: Literal["RUNNING", "STOPPED"] = "STOPPED"
+    run_started_at: AwareDatetime | None = None
 
 
 class ComponentCard(ComponentOut):
@@ -193,6 +217,15 @@ class WorkHistoryOut(BaseModel):
     offset: int
 
 
+class DiagnosticPreviewOut(BaseModel):
+    diagnostics: list[dict]
+    ignored_readings: list[str]
+    limitations: str
+    component_resource: ComponentResource
+    component_id: int
+    saved: Literal[False] = False
+
+
 class PhotoAttachedOut(BaseModel):
     photo_id: int
 
@@ -213,3 +246,9 @@ class DeviceInspectionOut(InspectionOut):
     detections: list[SavedFinding]
     telemetry: list[SensorReading]
     telemetry_source: Literal["CLIENT_REPORTED"]
+    visual_checks: list[VisualCheck] = Field(default_factory=list)
+    comment: str = ""
+    diagnostics: list[dict] = Field(default_factory=list)
+    component_resource: dict | None = None
+    diagnostic_limitations: str = ""
+    ignored_readings: list[str] = Field(default_factory=list)

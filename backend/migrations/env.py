@@ -32,12 +32,16 @@ with context.begin_transaction():
                 raise RuntimeError("Legacy revision does not match the database schema; refusing to stamp")
             for table in required:
                 expected_columns = set(Base.metadata.tables[table].columns.keys())
+                if table == "equipment_components":
+                    expected_columns -= {"runtime_state", "run_started_at"}
+                if table == "equipment":
+                    expected_columns -= {"serial_number"}
                 if table == "issues" and previous < "0004":
                     expected_columns -= {"closed_by", "close_review_id", "close_reason", "resolution"}
                 existing_columns = {column["name"] for column in schema_inspector.get_columns(table)}
                 if not expected_columns.issubset(existing_columns):
                     raise RuntimeError("Legacy revision has missing columns; refusing to stamp")
-            head = ScriptDirectory.from_config(context.config).get_revision("head")
+            head = ScriptDirectory.from_config(context.config).get_revision("0001")
             with Operations.context(context.get_context()):
                 head.module.upgrade_from(previous)
             connection.execute(text("UPDATE alembic_version SET version_num = :head"), {"head": head.revision})

@@ -1,0 +1,84 @@
+{
+  "checked_on": "2026-11-13",
+  "current_model_replaced": false,
+  "pretrained_candidates": [
+    {
+      "name": "SpiderBot v1 YOLOv8n",
+      "source": "https://github.com/aziz-hizem/spiderbot-rust-detection",
+      "revision": "d077206d805333b689637766287a6f80ec470946",
+      "weights_url": "https://raw.githubusercontent.com/aziz-hizem/spiderbot-rust-detection/d077206d805333b689637766287a6f80ec470946/models/v1_yolov8n.pt",
+      "sha256": "23616c79be9487c96a4230c11285414b9377544320775c68843afee9b15f2cd4",
+      "local_file": "ai/candidates/spiderbot/v1_yolov8n.pt",
+      "task": "detection",
+      "classes": [
+        "Corrosion"
+      ],
+      "code_license": "MIT",
+      "dataset_license_reported_by_author": "CC BY 4.0",
+      "framework_license": "AGPL-3.0",
+      "status": "DOWNLOADED_UNEVALUATED",
+      "fit": "Lightweight general corrosion detector; no pump identification or separate pitting class. Original author reports only nine validation images. Current Android class mapping is incompatible."
+    },
+    {
+      "name": "Decizez Lite YOLOv8 segmentation",
+      "source": "https://huggingface.co/Decizez/yolov-corrosion-detection",
+      "weights_file": "Lite_YOLO8_v1.pt",
+      "task": "instance_segmentation",
+      "model_card_license": "MIT",
+      "classes": "Full checkpoint class order not inspected; card describes rust levels, cars, screws, pipes and metal plates",
+      "status": "NOT_DOWNLOADED",
+      "fit": "Published 6.79 MB checkpoint; segmentation output is incompatible with current detection-only Android decoder. Dataset rights and exact labels require verification."
+    },
+    {
+      "name": "BuildingBlocks corrosion-9ge01",
+      "source": "https://universe.roboflow.com/buildingblocks/corrosion-9ge01",
+      "task": "instance_segmentation",
+      "dataset_license": "CC BY 4.0",
+      "classes": [
+        "Crevice Corrosion",
+        "Pitting Corrosion",
+        "Uniform Corrosion"
+      ],
+      "status": "OFFLINE_CHECKPOINT_NOT_VERIFIED",
+      "fit": "Relevant pitting labels, but no verified downloadable .pt checkpoint. Public metrics are poor; hosted API cannot replace an offline local model. Not a pump-specific dataset."
+    }
+  ],
+  "dataset_candidates": [
+    {
+      "name": "Roboflow 100 corrosion-bi3q3, public smoke subset",
+      "source": "https://huggingface.co/datasets/LibreYOLO/corrosion-bi3q3",
+      "original_source": "https://universe.roboflow.com/roboflow-100/corrosion-bi3q3/dataset/1",
+      "license": "CC BY 4.0",
+      "annotation": "YOLO bounding boxes, classes Slippage/corrosion/crack",
+      "local_directory": "ai/dataset/public-corrosion-smoke",
+      "local_samples": 24,
+      "status": "DOWNLOADED_CHECKSUM_VERIFIED_NOT_PUMP_REVIEWED",
+      "fit": "General industrial corrosion smoke test only; not evidence of target-pump performance; excluded from training pending group/label review."
+    },
+    {
+      "name": "Images and pixel annotations for corrosion segmentation",
+      "source": "https://data.mendeley.com/datasets/kcyn4nhv2c/1",
+      "doi": "10.17632/kcyn4nhv2c.1",
+      "license": "CC BY 4.0",
+      "annotation": "1024 field images; 35 selected images with sparse 5x5 pixel patches, not complete YOLO boxes",
+      "fit": "Additional corrosion surfaces only; must filter pumps, review groups and create detection labels. Not downloaded automatically."
+    },
+    {
+      "name": "Corrosion in Industrial Complexes in Ostrava",
+      "source": "https://zenodo.org/records/11235637",
+      "annotation": "105 industrial images with corrosion segmentation masks",
+      "license": "UNVERIFIED_FROM_RECORD",
+      "fit": "Source record did not expose a clear license in checked content. Not downloaded or approved for training. Not pump-specific."
+    },
+    {
+      "name": "Local pump reference photographs",
+      "source": "ai/dataset/references/manifest.json",
+      "annotation": "None; three images of split-case pumps from public refurbishment case studies",
+      "license": "UNVERIFIED",
+      "fit": "Reference inspection only. Excluded from train/val/test."
+    }
+  ],
+  "target_pump_training_completed": false,
+  "general_corrosion_candidate_finetuned": true,
+  "finetune_report": "ai/candidates/spiderbot-cpu-finetune/report.json"
+}

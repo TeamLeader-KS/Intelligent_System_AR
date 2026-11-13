@@ -2,8 +2,32 @@ package com.example.intelligent_system_ar.data.remote
 
 import com.example.intelligent_system_ar.data.remote.model.*
 import retrofit2.http.*
+import okhttp3.MultipartBody
+import okhttp3.ResponseBody
 
 interface DirectoryApi : AuthApi {
+    @Streaming
+    @GET("inspections/{id}/export")
+    suspend fun exportInspection(@Header("Authorization") token: String,@Path("id") id: Int,
+                                 @Query("format") format: String): ResponseBody
+    @GET("inspections/{id}")
+    suspend fun inspection(@Header("Authorization") token: String,@Path("id") id: Int): SavedInspectionDto
+    @POST("inspections/mobile")
+    suspend fun saveInspection(@Header("Authorization") token: String, @Header("Idempotency-Key") key: String,
+                               @Body body: DeviceInspectionRequest): SavedInspectionDto
+
+    @Multipart
+    @POST("inspections/{id}/photo")
+    suspend fun attachPhoto(@Header("Authorization") token: String, @Path("id") id: Int,
+                            @Part image: MultipartBody.Part)
+
+    @POST("components/{id}/work")
+    suspend fun recordWork(@Header("Authorization") token: String, @Path("id") id: Int,
+                           @Header("Idempotency-Key") key: String, @Body body: ComponentWorkRequest): ComponentWorkItemDto
+
+    @GET("components/{id}/work")
+    suspend fun workHistory(@Header("Authorization") token: String, @Path("id") id: Int,
+                            @Query("limit") limit: Int=20,@Query("offset") offset: Int=0): ComponentWorkHistoryDto
     @GET("me")
     suspend fun me(@Header("Authorization") token: String): AccountDto
 

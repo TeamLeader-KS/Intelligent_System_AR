@@ -1,0 +1,3 @@
+# YOLOv8-era exporter matching the current model family; isolated training environment.
+ultralytics==8.3.228
+Pillow==12.0.0

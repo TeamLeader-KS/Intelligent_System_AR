@@ -22,7 +22,7 @@ def test_openapi_operations_have_russian_guide_examples_and_security():
                 assert response["description"]
                 if code == "204":
                     assert "content" not in response
-                elif "/photos/" not in path or code != "200":
+                elif not (code == "200" and ("/photos/" in path or path.endswith("/export"))):
                     assert response["content"]["application/json"].get("examples"), (method,path,code)
     assert schema["paths"]["/api/v1/users"]["get"]["security"] == [{"AdminSession":[]}]
     assert schema["paths"]["/api/v1/me"]["get"]["security"] == [{"AccessToken":[]},{"AdminSession":[]}]
@@ -49,6 +49,7 @@ def test_documented_schema_examples_pass_real_http_validation():
     assert request["properties"]["image"]["format"] == "binary"
     assert "EXIF" in request["properties"]["image"]["description"]
     assert set(schema["paths"]["/api/v1/photos/{photo_id}"]["get"]["responses"]["200"]["content"]) == {"image/jpeg","image/png"}
+    assert set(schema["paths"]["/api/v1/inspections/{inspection_id}/export"]["get"]["responses"]["200"]["content"]) == {"application/pdf","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}
 
 
 def test_openapi_references_resolve():

@@ -1,0 +1,15 @@
+{
+  "classes": ["corrosion", "pitting", "rust"],
+  "samples": [
+    {
+      "image": "images/pump-001-front.jpg",
+      "label": "labels/pump-001-front.txt",
+      "equipment_group": "physical-pump-001",
+      "source_url": "internal://team/photo-session-001",
+      "license": "team-owned",
+      "origin": "real",
+      "reviewed": false,
+      "negative": false
+    }
+  ]
+}

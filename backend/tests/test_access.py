@@ -177,7 +177,7 @@ def test_equipment_card_and_knowledge_access(client, role):
                   "workshop_id":workshop_id, "type_id":type_id, "passport":"Демонстрационный макет, крепление М6."}
         response = client.post("/api/v1/equipment", json=values, headers=HEADERS)
         assert response.status_code == 201
-        cards.append({"id":response.json()["id"], **values})
+        cards.append({"id":response.json()["id"], "serial_number": None, **values})
     defects = []
     for status, name, recommendation in (
         ("WARNING", "Недокручен", "На демонстрационном макете докрутить крепёж."),

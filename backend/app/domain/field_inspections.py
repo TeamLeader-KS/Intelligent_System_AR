@@ -1,5 +1,5 @@
 """Device findings are observations, not proof of a fault or remaining life."""
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from app.domain.errors import AnalysisError
 
 
@@ -51,13 +51,38 @@ def component_resource(component: dict, today: date) -> dict:
                             "Неизвестные значения не заменяются нулём."}
 
 
-def apply_component_work(component: dict, values: dict) -> dict:
+def current_runtime(component: dict, now: datetime) -> dict:
+    updated = dict(component)
+    if component.get("runtime_state") == "RUNNING" and component.get("run_started_at"):
+        start = datetime.fromisoformat(component["run_started_at"])
+        if now < start:
+            raise AnalysisError("COMPONENT_CONFLICT", "Серверное время меньше начала работы")
+        updated["operating_hours"] = component["operating_hours"] + (now - start).total_seconds() / 3600
+    return updated
+
+
+def apply_component_work(component: dict, values: dict, now: datetime | None = None) -> dict:
     if values["expected_revision"] != component["revision"]:
         raise AnalysisError("COMPONENT_CONFLICT", "Карточка компонента изменилась; загрузите её повторно")
     occurred = datetime.fromisoformat(values["occurred_at"].replace("Z", "+00:00"))
     if component.get("last_event_at") and occurred < datetime.fromisoformat(component["last_event_at"]):
         raise AnalysisError("COMPONENT_CONFLICT", "Нельзя изменить состояние событием старше последнего")
-    updated = dict(component)
+    now = now or datetime.now(timezone.utc)
+    action = values["action"]
+    running = component.get("runtime_state") == "RUNNING"
+    if action == "STARTED" and running or action == "STOPPED" and not running:
+        raise AnalysisError("COMPONENT_CONFLICT", "Компонент уже находится в этом состоянии")
+    if running and (action in ("REPLACED", "SERVICED") or values.get("operating_hours") is not None):
+        raise AnalysisError("VALIDATION_ERROR", "Перед обслуживанием, заменой или вводом наработки остановите компонент")
+    updated = current_runtime(component, now)
+    if running:
+        updated["run_started_at"] = now.isoformat()
+    if action == "STARTED":
+        if component.get("operating_hours") is None:
+            raise AnalysisError("VALIDATION_ERROR", "Сначала укажите исходную наработку")
+        updated.update(runtime_state="RUNNING", run_started_at=now.isoformat())
+    elif action in ("STOPPED", "REPLACED"):
+        updated.update(runtime_state="STOPPED", run_started_at=None)
     for field in ("operating_hours", "operating_cycles"):
         value = values.get(field)
         if values["action"] == "REPLACED":

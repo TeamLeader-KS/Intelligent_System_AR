@@ -1,5 +1,5 @@
 from datetime import date, datetime, timezone
-from sqlalchemy import select, func
+from sqlalchemy import select, func, or_
 from app.application.contracts import Account
 from app.domain.errors import AnalysisError
 from app.domain.field_inspections import apply_component_work, component_resource
@@ -22,11 +22,16 @@ class PostgresFieldServiceRepository:
         return query
 
     def resolve_equipment(self, code: str, actor: Account) -> int | None:
-        query = select(Equipment.id).where(Equipment.inventory_number == code)
+        normalized = code.strip().lower()
+        query = select(Equipment.id).where(or_(func.lower(Equipment.inventory_number) == normalized,
+                                             func.lower(Equipment.serial_number) == normalized))
         if actor.role != "ADMIN":
             query = query.where(Equipment.workshop_id == actor.workshop_id)
         with self.sessions() as db:
-            return db.scalar(query)
+            matches = db.scalars(query.limit(2)).all()
+            if len(matches) > 1:
+                raise AnalysisError("IDENTIFIER_AMBIGUOUS", "Номер соответствует нескольким агрегатам; выберите оборудование вручную")
+            return matches[0] if matches else None
 
     def model(self, sha256: str) -> dict | None:
         with self.sessions() as db:
@@ -82,11 +87,11 @@ class PostgresFieldServiceRepository:
             before = component_dict(component)
             after = apply_component_work(before, values)
             for name in ("installed_on", "operating_hours", "operating_cycles", "last_service_hours",
-                         "last_serviced_at", "last_event_at", "revision"):
+                         "last_serviced_at", "last_event_at", "revision", "runtime_state", "run_started_at"):
                 value = after[name]
                 if value is not None and name == "installed_on":
                     value = date.fromisoformat(value)
-                elif value is not None and name in ("last_serviced_at", "last_event_at"):
+                elif value is not None and name in ("last_serviced_at", "last_event_at", "run_started_at"):
                     value = datetime.fromisoformat(value)
                 setattr(component, name, value)
             event = ComponentWork(component_id=component_id, author_id=actor.id, workshop_id=equipment.workshop_id,

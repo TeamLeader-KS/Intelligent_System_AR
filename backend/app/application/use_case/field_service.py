@@ -10,7 +10,8 @@ from app.application.ports.analysis import ImageDecoder
 from app.application.use_case.inspections import InspectionsUseCase
 from app.application.dtos.inspections import InspectionResponse
 from app.domain.errors import AnalysisError
-from app.domain.field_inspections import evaluate_findings, component_resource
+from app.domain.field_inspections import evaluate_findings, component_resource, current_runtime
+from app.domain.pump_diagnostics import diagnose_pump
 
 
 class FieldServiceUseCase:
@@ -31,7 +32,9 @@ class FieldServiceUseCase:
     def card(self, equipment_id: int, actor: Account) -> dict:
         row = self.equipment(equipment_id, actor)
         components = self.records.components(equipment_id, actor)
-        today = datetime.now(timezone.utc).date()
+        now = datetime.now(timezone.utc)
+        components = [current_runtime(item, now) for item in components]
+        today = now.date()
         return {**asdict(row), "qr_code": row.inventory_number,
                 "components": [{**item, "resource": component_resource(item, today)} for item in components]}
 
@@ -69,9 +72,21 @@ class FieldServiceUseCase:
         self.require_component(component_id, actor)
         return self.records.work_history(component_id, actor, limit, offset)
 
+    def diagnosis(self, equipment_id: int, values: dict, actor: Account) -> dict:
+        self.equipment(equipment_id, actor)
+        component = self.require_component(values["component_id"], actor)
+        if component["equipment_id"] != equipment_id:
+            raise AnalysisError("NOT_FOUND", "Компонент не найден")
+        now = datetime.now(timezone.utc)
+        resource = component_resource(current_runtime(component, now), now.date())
+        return {**diagnose_pump(values.get("telemetry", []), component["specifications"],
+                               values.get("visual_checks", []), values["captured_at"], resource),
+                "component_resource": resource, "component_id": component["id"], "saved": False}
+
     def mobile_inspection(self, values: dict, key: str, actor: Account) -> InspectionResponse:
         equipment = self.equipment(values["equipment_id"], actor)
         component_id = values.get("component_id")
+        component = None
         if component_id is not None:
             component = self.require_component(component_id, actor)
             if component["equipment_id"] != equipment.id:
@@ -90,6 +105,16 @@ class FieldServiceUseCase:
                 raise AnalysisError("IDEMPOTENCY_CONFLICT", "Ключ уже использован для другого запроса")
             return self.inspections.response(record)
         result = evaluate_findings(values["defects"], profile["labels"], profile["threshold"])
+        now = datetime.now(timezone.utc)
+        resource = component_resource(current_runtime(component, now), now.date()) if component else None
+        diagnosis = diagnose_pump(values.get("telemetry", []), component["specifications"] if component else [],
+                                  values.get("visual_checks", []), values["captured_at"], resource)
+        condition_findings = [item for item in diagnosis["diagnostics"] if item["code"] != "SERVICE_INTERVAL"]
+        if condition_findings:
+            critical = any(item["status"] == "CRITICAL" for item in condition_findings)
+            result.update(status="CRITICAL" if critical else "WARNING", color="RED" if critical else "ORANGE",
+                          reason="; ".join(item["reason"] for item in condition_findings),
+                          recommendation="; ".join(item["recommendation"] for item in condition_findings))
         body = {**result, "inspection_id": record.id, "equipment_id": equipment.id,
                 "object": equipment.name, "author_id": actor.id, "workshop_id": equipment.workshop_id,
                 "photo_id": None, "source": values["source"], "image": values["image"],
@@ -98,6 +123,9 @@ class FieldServiceUseCase:
                 "analysis_source": "MODEL", "analysis_location": "ANDROID", "model_version": profile["version"],
                 "model_sha256": values["model_sha256"], "threshold": profile["threshold"],
                 "telemetry": values.get("telemetry", []), "telemetry_source": "CLIENT_REPORTED"}
+        body.update(visual_checks=values.get("visual_checks", []), comment=values.get("comment", ""),
+                    diagnostics=diagnosis["diagnostics"], component_resource=resource,
+                    diagnostic_limitations=diagnosis["limitations"], ignored_readings=diagnosis["ignored_readings"])
         if body["box"] is not None:
             width, height = values["image"]["width"], values["image"]["height"]
             body["box"] = [round(value * size) for value, size in zip(body["box"], (width, height, width, height))]

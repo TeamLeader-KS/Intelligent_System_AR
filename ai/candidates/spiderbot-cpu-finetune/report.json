@@ -1,0 +1,52 @@
+{
+  "status": "GENERAL_CORROSION_CANDIDATE_NOT_DEPLOYED",
+  "epochs_requested": 20,
+  "input_counts": {
+    "train": 20,
+    "val": 5,
+    "test": 6
+  },
+  "classes": [
+    "Corrosion"
+  ],
+  "imgsz": 320,
+  "baseline_validation": {
+    "metrics/precision(B)": 0.16979411857344479,
+    "metrics/recall(B)": 0.07142857142857142,
+    "metrics/mAP50(B)": 0.059857487922705316,
+    "metrics/mAP50-95(B)": 0.020376989966555185,
+    "fitness": 0.020376989966555185
+  },
+  "candidate_validation": {
+    "metrics/precision(B)": 0.16346825289877473,
+    "metrics/recall(B)": 0.2237407861675643,
+    "metrics/mAP50(B)": 0.13317188118811882,
+    "metrics/mAP50-95(B)": 0.051960181033487964,
+    "fitness": 0.051960181033487964
+  },
+  "new_weights": "/outputs/run/weights/best.pt",
+  "torch": "2.6.0+cpu",
+  "limitations": [
+    "General corrosion surfaces, not a pump-specific dataset",
+    "Upstream physical equipment grouping and original pretrained-model data overlap unknown",
+    "Only source corrosion class 1 remapped to model class 0; mixed-class images excluded",
+    "No field-quality improvement claim; no target pump test",
+    "Current APK TFLite unchanged; candidate output shape/class order incompatible"
+  ],
+  "test_after_selection": {
+    "metrics/precision(B)": 0.026287315642970654,
+    "metrics/recall(B)": 0.06666666666666667,
+    "metrics/mAP50(B)": 0.0077281730478178864,
+    "metrics/mAP50-95(B)": 0.003203987329725399,
+    "fitness": 0.003203987329725399
+  },
+  "epochs_completed": 9,
+  "selected_epoch": 4,
+  "artifact_path": "ai/candidates/spiderbot-cpu-finetune/best.pt",
+  "weights_sha256": "19dbeb5eddc7e65bf73bab384916b73fbbb1f839b085615e2a4cc718ce59aeb0",
+  "deployment_decision": "REJECTED_FOR_DEPLOYMENT_INSUFFICIENT_TARGET_QUALITY",
+  "ultralytics": "8.3.228",
+  "data_source": "https://huggingface.co/datasets/LibreYOLO/corrosion-bi3q3",
+  "data_license": "CC BY 4.0",
+  "source_revision": "bd945651deedd4cd61646cd152019a1a26f91101"
+}

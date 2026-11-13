@@ -49,6 +49,8 @@ TAGS = [
 ]
 
 OPERATIONS = {
+    ("post", "/api/v1/equipment/{equipment_id}/diagnostics/preview"):("Осмотры", "Проверить показания по предварительным правилам", "Проверяет доступ к агрегату и компоненту, использует уставки карточки, показания с единицами и временем, ручные визуальные замечания. Показания старше 5 минут относительно captured_at и неизвестные единицы исключаются. Возвращает предварительные гипотезы и нормативный ресурс без сохранения осмотра и без подтверждения внутренней неисправности."),
+    ("get", "/api/v1/inspections/{inspection_id}/export"):("Осмотры", "Скачать отчёт осмотра PDF или Excel", "Доступ совпадает с чтением осмотра по роли и цеху. Формат pdf или xlsx. Отчёт содержит исходные наблюдения, последнюю инженерную оценку и ограничения; он не является электронной подписью или подтверждением причины неисправности."),
     ("post", "/api/v1/mobile-models"):("Справочники", "Зарегистрировать контракт модели Android", "Только администратор: SHA-256 файла, версия, полный подтверждённый порядок классов и порог отображения. Контракт неизменяем; class_id не считается каталоговым ID дефекта. NORMAL и UNKNOWN никогда не превращаются в неисправность. Повторный SHA даёт конфликт."),
     ("post", "/api/v1/inspections/mobile"):("Осмотры", "Сохранить результат модели с телефона", "Модель запускается на Android без интернета. Передайте equipment_id из QR-разрешения, SHA-256 зарегистрированной модели, captured_at с часовым поясом, размеры исходного кадра и список defects. Рамки нормализованы [xmin,ymin,xmax,ymax] относительно исходного кадра после поворота, а не letterbox 640x640. Порог применяется строго через >; confidence не задаёт критичность. Сохраняются все находки, фотография загружается отдельно, поэтому photo_id сначала null. Нужен UUID Idempotency-Key. Показания telemetry сохраняются как сообщения клиента, а не измерения камеры; автоматических диагнозов по ним нет."),
     ("post", "/api/v1/inspections/{inspection_id}/photo"):("Осмотры", "Прикрепить снимок мобильного осмотра", "Только автор доступного мобильного осмотра. Multipart с одним файлом image, JPEG/PNG до 10 МиБ. Размеры после EXIF должны совпасть с исходным кадром осмотра. Идентичный нормализованный снимок допускает повтор; замена другим запрещена. Исходный ответ создания осмотра при повторе остаётся неизменным, GET осмотра возвращает актуальный photo_id."),
@@ -168,6 +170,8 @@ DEVICE_RESULT = {**INSPECTION,"photo_id":None,"component_id":41,"image":DEVICE_I
                  "detections":[{**DEVICE_INPUT["defects"][0],"class_name":"Ржавчина","kind":"DEFECT","defect_id":2,"accepted":True}]}
 SCHEMA_EXAMPLES.update({
     "NewMobileModel":MOBILE_MODEL,"NewDeviceInspection":DEVICE_INPUT,"NewComponent":COMPONENT_INPUT,
+    "NewDiagnosticPreview":{"component_id":41,"captured_at":"2026-11-11T09:00:00Z","telemetry":[],"visual_checks":[]},
+    "DiagnosticPreviewOut":{"component_id":41,"diagnostics":[],"ignored_readings":[],"limitations":"Предварительные правила; данных для диагноза недостаточно.","component_resource":RESOURCE,"saved":False},
     "NewComponentWork":COMPONENT_WORK_INPUT,"DeviceInspectionOut":DEVICE_RESULT,
     "ComponentOut":COMPONENT,"ComponentWorkOut":COMPONENT_WORK,"PhotoAttachedOut":{"photo_id":501},
     "EquipmentDigitalCard":{**EQUIPMENT,"qr_code":"DEMO-125","components":[{**COMPONENT,"resource":RESOURCE}]},
@@ -175,6 +179,9 @@ SCHEMA_EXAMPLES.update({
 })
 
 FIELD_DESCRIPTIONS = {
+    "format":"Формат файла отчёта: pdf или xlsx (Excel).",
+    "serial_number":"Заводской номер с шильдика. При неоднозначном совпадении требуется ручной выбор агрегата.",
+    "runtime_state":"RUNNING — моточасы считаются по серверному времени; STOPPED — наработка не растёт.",
     "id":"Идентификатор записи, назначенный сервером.", "login":"Логин: латинские буквы, цифры, _, точка и дефис. Уникален.",
     "password":"Пароль. Передаётся только при входе или создании сотрудника, в ответах не возвращается.",
     "full_name":"ФИО сотрудника для отображения.", "role":"Роль: ADMIN — администратор, WORKER — рабочий, MASTER — мастер, ENGINEER — инженер, HEAD — начальник цеха.",
@@ -351,6 +358,8 @@ def enrich_schema(schema: dict) -> None:
                     operation["responses"][str(code)]["headers"] = {"Retry-After":{"description":"Число секунд до следующей попытки входа.","schema":{"type":"integer"},"example":300}}
             if path.startswith("/api/v1/photos/"):
                 operation["responses"]["200"] = {"description":"Бинарный JPEG/PNG нормализованного снимка. Cache-Control: no-store.","content":{mime:{"schema":{"type":"string","format":"binary"}} for mime in ("image/jpeg","image/png")}}
+            if path.endswith("/export"):
+                operation["responses"]["200"] = {"description":"Бинарный PDF либо XLSX. Имя файла задано сервером; доступ проверяется до формирования отчёта.","content":{mime:{"schema":{"type":"string","format":"binary"}} for mime in ("application/pdf","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")}}
 
 
 def configure_openapi(app) -> None:

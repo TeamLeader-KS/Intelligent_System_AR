@@ -15,11 +15,23 @@ import com.example.intelligent_system_ar.data.remote.ApiClient
 import com.example.intelligent_system_ar.data.remote.DirectoryApi
 import com.example.intelligent_system_ar.data.remote.ServerConfig
 import com.example.intelligent_system_ar.data.remote.model.*
+import com.example.intelligent_system_ar.data.local.InspectionOutbox
+import com.example.intelligent_system_ar.data.local.PendingOperation
+import com.example.intelligent_system_ar.data.ml.CapturedInspection
+import com.example.intelligent_system_ar.data.ml.ObjectDetectorHelper
 import com.google.gson.JsonParseException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import okhttp3.MediaType
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
 import retrofit2.HttpException
 import java.io.IOException
+import java.io.File
+import java.time.Instant
+import java.util.UUID
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val prefs = app.getSharedPreferences("local_server_session", Context.MODE_PRIVATE)
@@ -56,11 +68,41 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         private set
     var event by mutableStateOf<String?>(null)
         private set
+    var selectedComponentId by mutableStateOf<Int?>(null)
+        private set
+    val selectedComponent: ComponentDto? get() = card?.components?.firstOrNull { it.id == selectedComponentId }
+    var inspectionComment by mutableStateOf("")
+    var visualChecks by mutableStateOf<Set<String>>(emptySet())
+    var isSaving by mutableStateOf(false)
+        private set
+    var saveMessage by mutableStateOf<String?>(null)
+        private set
+    var pendingCount by mutableStateOf(0)
+        private set
+    var workHistory by mutableStateOf<ComponentWorkHistoryDto?>(null)
+        private set
+    var isLoadingWork by mutableStateOf(false)
+        private set
+    var canRecordWork by mutableStateOf(false)
+        private set
+    var lastInspection by mutableStateOf<SavedInspectionDto?>(null)
+        private set
+    var reportToShare by mutableStateOf<Pair<File,String>?>(null)
+        private set
+    var isExporting by mutableStateOf(false)
+        private set
 
     private var sessionJob: Job? = null
     private var equipmentJob: Job? = null
     private var cardJob: Job? = null
     private var historyJob: Job? = null
+    private var queueJob: Job? = null
+    private var workHistoryJob: Job? = null
+    private var exportJob: Job? = null
+    private var sessionGeneration = 0
+
+    private fun outbox(): InspectionOutbox = InspectionOutbox(
+        File(getApplication<Application>().noBackupFilesDir, "inspection-outbox"), serverUrl, userState.employeeId)
 
     fun login(address: String, login: String, password: String) {
         if (isLoggingIn) return
@@ -93,7 +135,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 val (token, user) = load(api)
                 userState = user.toUserState()
                 accessToken = token
+                canRecordWork = user.role in listOf("ADMIN", "MASTER", "ENGINEER")
                 refreshEquipment()
+                flushPending()
             } catch (e: LoginException) {
                 loginError = e.message
             } catch (e: HttpException) {
@@ -110,10 +154,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun logout() {
+        sessionGeneration++
         sessionJob?.cancel()
         equipmentJob?.cancel()
         cardJob?.cancel()
         historyJob?.cancel()
+        queueJob?.cancel()
+        workHistoryJob?.cancel()
+        exportJob?.cancel()
         accessToken = null
         tokenStore.clear()
         prefs.edit().remove("access_token").apply()
@@ -129,6 +177,18 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         isLoadingEquipment = false
         isLoadingCard = false
         isLoadingHistory = false
+        selectedComponentId = null
+        inspectionComment = ""
+        visualChecks = emptySet()
+        pendingCount = 0
+        isSaving = false
+        canRecordWork = false
+        saveMessage = null
+        workHistory = null
+        lastInspection = null
+        reportToShare = null
+        isExporting = false
+        isLoadingWork = false
     }
 
     fun refreshEquipment() {
@@ -165,6 +225,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val token = accessToken ?: return
         cardJob?.cancel()
         historyJob?.cancel()
+        val previousEquipmentId = card?.id
+        val previousComponentId = selectedComponentId
         card = null
         history = null
         historyError = null
@@ -174,6 +236,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             cardError = null
             try {
                 card = load("Bearer $token")
+                selectedComponentId = previousComponentId.takeIf { previousEquipmentId == card?.id && card?.components?.any { it.id == previousComponentId } == true }
+                if(previousEquipmentId != card?.id) { visualChecks=emptySet();inspectionComment="";lastInspection=null }
+                workHistory = null
             } catch (e: HttpException) {
                 cardError = authenticatedError(e)
             } catch (e: IOException) {
@@ -186,7 +251,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun loadHistory() {
+    fun loadHistory(offset: Int=0) {
         val token = accessToken ?: return
         val id = card?.id ?: return
         historyJob?.cancel()
@@ -194,7 +259,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             isLoadingHistory = true
             historyError = null
             try {
-                history = api.history("Bearer $token", id)
+                history = api.history("Bearer $token", id,offset=offset.coerceAtLeast(0))
             } catch (e: HttpException) {
                 historyError = authenticatedError(e)
             } catch (e: IOException) {
@@ -208,6 +273,185 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun consumeEvent() { event = null }
+
+    fun consumeReport() { reportToShare=null }
+    fun reportShareFailed() { saveMessage="Не удалось открыть окно отправки. Отчёт можно получить в веб-кабинете." }
+
+    fun exportInspection(id: Int,format: String) {
+        val token=accessToken ?: return
+        if(isExporting || format !in listOf("pdf","xlsx")) return
+        val generation=sessionGeneration
+        val client=api
+        exportJob=viewModelScope.launch {
+            isExporting=true
+            try {
+                val result=withContext(Dispatchers.IO) {
+                    val directory=File(getApplication<Application>().cacheDir,"reports")
+                    if(!directory.exists() && !directory.mkdirs()) throw IOException("Не удалось создать каталог отчётов")
+                    val temporary=File.createTempFile("inspection-",".part",directory)
+                    try {
+                        client.exportInspection("Bearer $token",id,format).use { body ->
+                            body.byteStream().use { source -> temporary.outputStream().use { output ->
+                                val buffer=ByteArray(8192)
+                                var total=0
+                                while(true) {
+                                    val n=source.read(buffer)
+                                    if(n<0) break
+                                    total+=n
+                                    if(total>20*1024*1024) throw IOException("Отчёт превышает допустимый размер")
+                                    output.write(buffer,0,n)
+                                }
+                            } }
+                        }
+                        // A previously shared URI must never start serving a later account's report.
+                        val target=File(directory,"inspection-$id-${UUID.randomUUID()}.$format")
+                        if(!temporary.renameTo(target)) throw IOException("Не удалось сохранить отчёт")
+                        target
+                    } finally { temporary.delete() }
+                }
+                if(generation == sessionGeneration) reportToShare=result to if(format=="pdf") "application/pdf" else "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            } catch(e: HttpException) { saveMessage=authenticatedError(e) }
+            catch(e: IOException) { saveMessage=e.message ?: "Не удалось загрузить отчёт" }
+            finally { if(generation == sessionGeneration) isExporting=false }
+        }
+    }
+
+    fun selectComponent(id: Int) {
+        if (card?.components?.any { it.id == id } != true) return
+        if(selectedComponentId != id) { visualChecks=emptySet();inspectionComment="";lastInspection=null }
+        selectedComponentId = id
+        workHistory = null
+        loadWorkHistory()
+    }
+
+    fun loadWorkHistory(offset: Int=0) {
+        val token = accessToken ?: return
+        val id = selectedComponentId ?: return
+        workHistoryJob?.cancel()
+        workHistoryJob = viewModelScope.launch {
+            isLoadingWork = true
+            try { workHistory = api.workHistory("Bearer $token", id,offset=offset.coerceAtLeast(0)) }
+            catch (e: HttpException) { saveMessage = authenticatedError(e) }
+            catch (e: IOException) { saveMessage = message(e) }
+            catch (e: JsonParseException) { saveMessage = "Не удалось прочитать историю работ" }
+            finally { isLoadingWork = false }
+        }
+    }
+
+    fun saveSnapshot(snapshot: CapturedInspection, equipmentId: Int, componentId: Int, comment: String,checks: Set<String>) {
+        if (accessToken == null || isSaving) return
+        val generation = sessionGeneration
+        val queue = outbox()
+        val request = DeviceInspectionRequest(equipmentId, componentId, capturedAt=snapshot.capturedAt,
+            modelSha256=ObjectDetectorHelper.MODEL_SHA256, image=InspectionFrame(snapshot.width,snapshot.height),
+            defects=snapshot.detections.map { item -> DeviceFindingDto(item.classId,item.confidence,
+                listOf(item.box.left,item.box.top,item.box.right,item.box.bottom)) }, comment=comment.trim(),visualChecks=checks.map { ManualVisualCheck(it) })
+        queueJob = viewModelScope.launch {
+            isSaving = true
+            try {
+                withContext(Dispatchers.IO) { queue.enqueue(PendingOperation(UUID.randomUUID().toString(),equipmentId,inspection=request),snapshot.jpeg) }
+                if (generation != sessionGeneration) return@launch
+                saveMessage = "Кадр сохранён на телефоне. Отправка на сервер…"
+                sendPending(queue,generation)
+            } catch (e: IOException) { saveMessage = e.message ?: "Не удалось сохранить снимок на телефоне" }
+            finally { if (generation == sessionGeneration) isSaving=false }
+        }
+    }
+
+    fun recordWork(action: String, comment: String, hours: Double? = null, cycles: Int? = null) {
+        val component = selectedComponent ?: return
+        val equipmentId = card?.id ?: return
+        if (!canRecordWork || isSaving || accessToken == null) return
+        if (comment.isBlank()) { saveMessage="Добавьте комментарий к работе"; return }
+        val generation = sessionGeneration
+        val queue = outbox()
+        queueJob = viewModelScope.launch {
+            isSaving = true
+            try {
+                val pending = withContext(Dispatchers.IO) { queue.entries() }
+                if (pending.any { it.work != null }) {
+                    saveMessage="Сначала отправьте ранее сохранённые работы, чтобы сохранить порядок наработки"
+                    return@launch
+                }
+                val request=ComponentWorkRequest(action,Instant.now().toString(),component.revision,comment.trim(),hours,cycles)
+                withContext(Dispatchers.IO) { queue.enqueue(PendingOperation(UUID.randomUUID().toString(),equipmentId,componentId=component.id,work=request)) }
+                sendPending(queue,generation)
+            } catch (e: IOException) { saveMessage=e.message ?: "Не удалось сохранить работу на телефоне" }
+            finally { if(generation == sessionGeneration) isSaving=false }
+        }
+    }
+
+    fun flushPending() {
+        if (accessToken == null || isSaving) return
+        val queue=outbox()
+        val generation=sessionGeneration
+        queueJob=viewModelScope.launch {
+            isSaving=true
+            try { sendPending(queue,generation) }
+            catch (e: IOException) { saveMessage=e.message ?: "Не удалось прочитать очередь" }
+            finally { if(generation == sessionGeneration) isSaving=false }
+        }
+    }
+
+    fun discardPendingWork() {
+        if(accessToken==null || isSaving) return
+        val queue=outbox()
+        val generation=sessionGeneration
+        queueJob=viewModelScope.launch {
+            isSaving=true
+            try {
+                val remaining=withContext(Dispatchers.IO) {
+                    queue.entries().filter { it.work!=null }.forEach { queue.remove(it) }
+                    queue.entries().size
+                }
+                if(generation==sessionGeneration) {
+                    pendingCount=remaining
+                    saveMessage="Локальные запросы работ отменены. Уже принятые сервером записи сохранены. Обновите карточку перед новой работой."
+                    card?.id?.let { selectEquipment(it) }
+                }
+            } catch(e: IOException) { saveMessage=e.message ?: "Не удалось изменить очередь" }
+            finally { if(generation==sessionGeneration) isSaving=false }
+        }
+    }
+
+    private suspend fun sendPending(queue: InspectionOutbox, generation: Int) {
+        val token=accessToken ?: return
+        val client=api
+        val entries=withContext(Dispatchers.IO) { queue.entries() }
+        pendingCount=entries.size
+        if(entries.isEmpty()) return
+        try {
+            for (entry in entries) {
+                if (generation != sessionGeneration) return
+                if (entry.inspection != null) {
+                    val response=if(entry.inspectionId == null) client.saveInspection("Bearer $token",entry.id,entry.inspection)
+                        else client.inspection("Bearer $token",entry.inspectionId)
+                    val id=response.inspectionId
+                    val saved=if(entry.inspectionId == null) withContext(Dispatchers.IO) { queue.markCreated(entry,id) } else entry
+                    val photo=queue.photo(saved)
+                    if(!photo.isFile) throw IOException("Снимок очереди отсутствует; запись оставлена для проверки")
+                    if (generation != sessionGeneration) return
+                    client.attachPhoto("Bearer $token",id,MultipartBody.Part.createFormData("image","frame.jpg",RequestBody.create(MediaType.parse("image/jpeg"),photo)))
+                    if(generation == sessionGeneration) lastInspection=response
+                } else if (entry.work != null && entry.componentId != null) {
+                    client.recordWork("Bearer $token",entry.componentId,entry.id,entry.work)
+                } else throw IOException("Неизвестная запись очереди; автоматическая отправка остановлена")
+                withContext(Dispatchers.IO) { queue.remove(entry) }
+                if (generation != sessionGeneration) return
+                pendingCount--
+            }
+            saveMessage="Осмотры и работы сохранены на сервере вместе с фотографиями"
+            card?.id?.let { selectEquipment(it) }
+        } catch(e: HttpException) {
+            saveMessage=when(e.code()) {
+                401 -> "Сессия истекла. Очередь сохранена: войдите под тем же пользователем."
+                409 -> "Конфликт данных: запись оставлена в очереди. Обновите карточку; повтор не создаёт дубликат."
+                422 -> "Сервер отклонил запись: проверьте регистрацию модели и данные осмотра. Запись сохранена в очереди."
+                else -> "${message(e)}. Запись остаётся в очереди."
+            }
+        } catch(e: IOException) { saveMessage="Нет подтверждения сервера. Запись сохранена на телефоне; нажмите «Отправить очередь»." }
+        catch(e: JsonParseException) { saveMessage="Неверный ответ сервера. Запись остаётся в очереди для безопасного повтора." }
+    }
 
     private fun AccountDto.toUserState() = UserState(
         login = login,
@@ -236,6 +480,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             401 -> "Неверный логин, пароль или истёкший токен"
             403 -> "Нет доступа к этим данным"
             404 -> "Оборудование или API не найдено. Проверьте адрес сервера."
+            409 -> "Номер неоднозначен или карточка изменилась. Выберите оборудование из списка и обновите карточку."
             429 -> "Слишком много попыток. Повторите позже."
             else -> "Сервер вернул ошибку ${e.code()}"
         }
