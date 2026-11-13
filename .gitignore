@@ -52,3 +52,5 @@ dataset/
 *.onnx
 models/
 dummy_input.npy
+!ai/models/
+!ai/models/best_float16.tflite

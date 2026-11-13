@@ -110,6 +110,46 @@ func TestAPKCacheRequiresMatchingSourcesAndFileHash(t *testing.T) {
 	}
 }
 
+func TestModelChangesInvalidateAndroidFingerprint(t *testing.T) {
+	// These tests do not use t.Parallel: the temporary cwd is process-wide.
+	previous, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := t.TempDir()
+	if err := os.Chdir(root); err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chdir(previous)
+	if err := os.MkdirAll("ai/models", 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir("mobile", 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile("mobile/build.gradle.kts", []byte("code"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	model := "ai/models/best_float16.tflite"
+	if err := os.WriteFile(model, []byte("model-v1"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	first, err := androidFingerprint()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(model, []byte("model-v2"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	second, err := androidFingerprint()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first == second {
+		t.Fatal("model changes must rebuild the APK")
+	}
+}
+
 func TestLocalSecretsAreCreatedOnce(t *testing.T) {
 	path := filepath.Join(t.TempDir(), ".env.local")
 	if err := prepareLocalEnv(path); err != nil {

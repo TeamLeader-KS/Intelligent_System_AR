@@ -1,9 +1,12 @@
 package com.example.intelligent_system_ar.data.ml
 
-import android.graphics.RectF
+enum class FindingKind { DEFECT, UNKNOWN }
 
+data class DetectionBox(val left: Float, val top: Float, val right: Float, val bottom: Float)
 data class Detection(
-    val boundingBox: RectF,
+    val classId: Int,
     val label: String,
-    val confidence: Float
+    val confidence: Float,
+    val kind: FindingKind,
+    val box: DetectionBox
 )

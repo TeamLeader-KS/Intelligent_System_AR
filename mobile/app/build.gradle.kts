@@ -10,6 +10,7 @@ plugins {
 
 android {
     namespace = "com.example.intelligent_system_ar"
+    sourceSets.getByName("main").assets.srcDir("../../ai/models")
     compileSdk {
         version = release(37)
     }

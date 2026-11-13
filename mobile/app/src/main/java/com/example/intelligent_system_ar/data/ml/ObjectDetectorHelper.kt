@@ -2,113 +2,69 @@ package com.example.intelligent_system_ar.data.ml
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.RectF
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Rect
+import org.tensorflow.lite.DataType
 import org.tensorflow.lite.Interpreter
 import org.tensorflow.lite.support.common.FileUtil
-import java.io.BufferedReader
-import java.io.InputStreamReader
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.security.MessageDigest
 
-
-class ObjectDetectorHelper(context: Context) {
-    private var interpreter: Interpreter
-    private val labels: List<String>
-    private val inputSize = 640
+/** Accessed only by the camera's single analysis executor. */
+class ObjectDetectorHelper(context: Context) : AutoCloseable {
+    private val labels = context.assets.open("labels.txt").bufferedReader().use { it.readLines() }
+    private val interpreter: Interpreter
+    private val bitmap = Bitmap.createBitmap(640, 640, Bitmap.Config.ARGB_8888)
+    private val canvas = Canvas(bitmap)
+    private val paint = Paint(Paint.FILTER_BITMAP_FLAG)
+    private val pixels = IntArray(640 * 640)
+    private val input = ByteBuffer.allocateDirect(640 * 640 * 3 * 4).order(ByteOrder.nativeOrder())
+    private val output = arrayOf(Array(17) { FloatArray(8400) })
 
     init {
-        val model = FileUtil.loadMappedFile(context, "best_float16.tflite")
-        val options = Interpreter.Options().apply { setNumThreads(4) }
-        interpreter = Interpreter(model, options)
-
-        val labelStream = context.assets.open("labels.txt")
-        labels = BufferedReader(InputStreamReader(labelStream)).use { reader ->
-            reader.readLines()
+        val hash = MessageDigest.getInstance("SHA-256")
+        context.assets.open("best_float16.tflite").use { stream ->
+            val buffer = ByteArray(8192)
+            while (true) { val count = stream.read(buffer); if (count < 0) break; hash.update(buffer, 0, count) }
         }
+        val actual = hash.digest().joinToString("") { "%02x".format(it.toInt() and 255) }
+        require(actual == MODEL_SHA256) { "Файл модели не соответствует проверенному контракту" }
+        require(labels.size == 12 && labels[5] == "Без коррозии") { "Неверный список меток" }
+        val model = FileUtil.loadMappedFile(context, "best_float16.tflite")
+        interpreter = Interpreter(model, Interpreter.Options().apply {
+            setNumThreads(minOf(4, Runtime.getRuntime().availableProcessors()))
+        })
+        try {
+            require(interpreter.getInputTensor(0).shape().contentEquals(intArrayOf(1,640,640,3)) &&
+                interpreter.getInputTensor(0).dataType() == DataType.FLOAT32)
+            require(interpreter.getOutputTensor(0).shape().contentEquals(intArrayOf(1,17,8400)) &&
+                interpreter.getOutputTensor(0).dataType() == DataType.FLOAT32)
+        } catch (error: RuntimeException) { interpreter.close(); throw error }
     }
 
     fun detect(image: Bitmap): List<Detection> {
-        // 1. Масштабируем под 640x640
-        val resizedBitmap = Bitmap.createScaledBitmap(image, inputSize, inputSize, true)
-        val inputBuffer = convertBitmapToByteBuffer(resizedBitmap)
-
-        // 2. Получаем форму выхода (YOLOv8: [1, 4 + num_classes, 8400])
-        val outputShape = interpreter.getOutputTensor(0).shape()
-        val outputArray = Array(outputShape[0]) {
-            Array(outputShape[1]) {
-                FloatArray(outputShape[2])
-            }
+        val geometry = LetterboxGeometry(image.width, image.height)
+        canvas.drawColor(Color.rgb(114,114,114))
+        canvas.drawBitmap(image, null, Rect(geometry.left, geometry.top,
+            geometry.left + geometry.scaledWidth, geometry.top + geometry.scaledHeight), paint)
+        bitmap.getPixels(pixels,0,640,0,0,640,640)
+        input.rewind()
+        for (pixel in pixels) {
+            input.putFloat((pixel shr 16 and 255) / 255f)
+            input.putFloat((pixel shr 8 and 255) / 255f)
+            input.putFloat((pixel and 255) / 255f)
         }
-
-        interpreter.run(inputBuffer, outputArray)
-
-        // 3. Парсим результаты
-        val detections = mutableListOf<Detection>()
-        val numClasses = labels.size
-        val rows = outputShape[2] // 8400 боксов
-        val cols = outputShape[1] // 4 (координаты) + классы
-
-        for (i in 0 until rows) {
-            var maxClassScore = 0f
-            var classId = -1
-
-            for (c in 0 until numClasses) {
-                val score = outputArray[0][4 + c][i]
-                if (score > maxClassScore) {
-                    maxClassScore = score
-                    classId = c
-                }
-            }
-
-            // Если уверенность > 0.4
-            if (maxClassScore > 0.4f && classId != -1) {
-                // Координаты YOLO (cx, cy, w, h) в пикселях
-                val cx = outputArray[0][0][i]
-                val cy = outputArray[0][1][i]
-                val w = outputArray[0][2][i]
-                val h = outputArray[0][3][i]
-
-                // Переводим в нормализованные (0..1) и RectF(left, top, right, bottom)
-                val left = (cx - w / 2) / inputSize
-                val top = (cy - h / 2) / inputSize
-                val right = (cx + w / 2) / inputSize
-                val bottom = (cy + h / 2) / inputSize
-
-                // Проверка на выход за границы
-                if (left < 0f || top < 0f || right > 1f || bottom > 1f) continue
-
-                val labelName = labels.getOrElse(classId) { "Дефект поверхности" }
-
-                detections.add(
-                    Detection(
-                        boundingBox = RectF(left, top, right, bottom),
-                        label = labelName,
-                        confidence = maxClassScore
-                    )
-                )
-            }
-        }
-
-        // Сортируем по уверенности (сначала самые точные)
-        return detections.sortedByDescending { it.confidence }.take(10)
+        input.rewind()
+        interpreter.run(input, output)
+        return YoloPostprocessor.decode(output[0], labels, geometry)
     }
 
-    private fun convertBitmapToByteBuffer(bitmap: Bitmap): ByteBuffer {
-        val byteBuffer = ByteBuffer.allocateDirect(1 * inputSize * inputSize * 3 * 4)
-        byteBuffer.order(ByteOrder.nativeOrder())
-        val intValues = IntArray(inputSize * inputSize)
-        bitmap.getPixels(intValues, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
+    override fun close() { interpreter.close(); bitmap.recycle() }
 
-        var pixel = 0
-        for (i in 0 until inputSize) {
-            for (j in 0 until inputSize) {
-                val `val` = intValues[pixel++]
-                // ВАЖНО: Нормализация 0..1 (а не -1..1!)
-                byteBuffer.putFloat((( `val` shr 16 and 0xFF) / 255.0f))
-                byteBuffer.putFloat((( `val` shr 8 and 0xFF) / 255.0f))
-                byteBuffer.putFloat((( `val` and 0xFF) / 255.0f))
-            }
-        }
-        return byteBuffer
+    companion object {
+        const val MODEL_SHA256 = "0c6ce9b3990dcfd9607a3bab073c66a42d4db882ae111676960dd59e6cf7b774"
     }
 }

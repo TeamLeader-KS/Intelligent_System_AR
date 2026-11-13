@@ -1,0 +1,13 @@
+*
+!mobile/
+!mobile/**
+!ai/
+!ai/models/
+!ai/models/best_float16.tflite
+mobile/.gradle
+mobile/.kotlin
+mobile/.idea
+mobile/**/build
+mobile/local.properties
+mobile/*.apk
+mobile/*.log

@@ -20,6 +20,7 @@ services:
       PHOTO_ROOT: /app/photos
       # Only the LAN installation exposes the locally built debug APK.
       ANDROID_APK_PATH: /app/downloads/app-debug.apk
+      CV_EXAMPLE_PATH: /app/cv-demo/rust-pump-closeup.png
       # Explicit opt-in to CLI-only synthetic accounts/equipment on the LAN demo.
       LOCAL_DEMO_ENABLED: "true"
     ports:
@@ -28,6 +29,7 @@ services:
     volumes:
       - photos:/app/photos
       - ./mobile/app/build/outputs/apk/debug:/app/downloads:ro
+      - ./ai/demo:/app/cv-demo:ro
     depends_on:
       database:
         condition: service_healthy

@@ -10,13 +10,13 @@ RUN curl -fsSL https://dl.google.com/android/repository/commandlinetools-linux-1
     && mv "$ANDROID_HOME/cmdline-tools/cmdline-tools" "$ANDROID_HOME/cmdline-tools/latest" \
     && rm /tmp/sdk.zip
 RUN yes | sdkmanager --sdk_root="$ANDROID_HOME" 'platforms;android-37.0' 'build-tools;36.0.0' 'platform-tools'
-WORKDIR /workspace
-COPY . .
+WORKDIR /workspace/mobile
+COPY mobile/ .
+COPY ai/models/ /workspace/ai/models/
 RUN --mount=type=cache,id=industrial-vision-gradle,target=/root/.gradle,sharing=locked \
     --mount=type=cache,id=industrial-vision-android-signing,target=/root/.android,sharing=locked \
-
-    --mount=type=cache,id=industrial-vision-project,target=/workspace/.gradle,sharing=locked \
+    --mount=type=cache,id=industrial-vision-project,target=/workspace/mobile/.gradle,sharing=locked \
     sh gradlew :app:assembleDebug --no-daemon --build-cache --max-workers=4 \
     && "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify app/build/outputs/apk/debug/app-debug.apk
 FROM scratch AS artifact
-COPY --from=builder /workspace/app/build/outputs/apk/debug/app-debug.apk /app-debug.apk
+COPY --from=builder /workspace/mobile/app/build/outputs/apk/debug/app-debug.apk /app-debug.apk

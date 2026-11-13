@@ -51,7 +51,7 @@ function Phone() {return <section className="panel"><h2>Подключение A
  <p>Обычный пользователь получает данные своего цеха. Он не имеет доступа к веб-кабинету, ключам и Swagger. Для серверных интеграций администратор может использовать свой API-ключ в том же заголовке Bearer.</p>
  <h3>Пример Java</h3><pre>{'// Выполнять в фоновом потоке\nURL url = new URL(BASE_URL + "/equipment");\nHttpURLConnection c = (HttpURLConnection) url.openConnection();\nc.setConnectTimeout(10000);\nc.setReadTimeout(10000);\nc.setRequestProperty("Authorization", "Bearer " + token);\nint status = c.getResponseCode();\n// 401: войти повторно; 403: нет разрешения'}</pre>
  <p>В AndroidManifest.xml требуется разрешение android.permission.INTERNET. Проверку HTTPS-сертификата отключать не нужно. Пароли и токены не записывать в логи и исходники APK; токен хранить с защитой Android Keystore.</p>
- <p>Доступны профиль, карточки оборудования и история осмотров. Распознавание камерой пока не включено.</p></section>;}
+ <p>Доступны профиль, карточки оборудования и история осмотров. Поверхностные дефекты распознаются камерой на телефоне.</p></section>;}
 
 function Cabinet({user,onLogout}:{user:Account;onLogout:()=>Promise<void>}) {
  const repo=useRepository();
@@ -80,8 +80,10 @@ function AndroidDownload() {
  <p role="status" aria-live="polite">{build.isPending?"Проверяем готовность APK…":build.isError?"Не удалось проверить сборку APK.":build.data.message}</p>
  {build.data?.state==="READY"&&<a className="button" href={import.meta.env.VITE_ANDROID_APK_URL} download>Скачать APK</a>}
  {build.isError&&<button className="secondary" onClick={()=>void build.refetch()}>Повторить</button>}
+ <p><a className="button secondary" href="/industrial-vision/cv-example" target="_blank" rel="noreferrer">Пример насоса для камеры ↗</a></p>
+ <p>Откройте пример на ноутбуке и наведите на него камеру телефона. Загрузка фотографии в приложение не нужна.</p>
  <p>Скачайте APK на телефон и откройте файл для установки. Телефон и ноутбук должны быть в одной Wi-Fi-сети.</p>
- <p>В приложении нажмите «Найти сервер в Wi-Fi». Тестовая сборка: вход, карточки и история; распознавание моделью пока не подключено.</p></section>;
+ <p>В приложении нажмите «Найти сервер в Wi-Fi». Модель анализирует живую камеру на телефоне. Результаты CV пока не отправляются в историю автоматически.</p></section>;
 }
 
 export function App() {

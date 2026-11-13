@@ -7,7 +7,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.intelligent_system_ar.data.model.ScanResult
 import com.example.intelligent_system_ar.data.model.UserState
 import com.example.intelligent_system_ar.data.auth.TokenStore
 import com.example.intelligent_system_ar.data.repository.AuthRepository
@@ -58,9 +57,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var event by mutableStateOf<String?>(null)
         private set
 
-    // Сканирование включается только после подключения реального локального CV.
-    val isScanning = false
-    val scanResult: ScanResult? = null
     private var sessionJob: Job? = null
     private var equipmentJob: Job? = null
     private var cardJob: Job? = null
@@ -209,16 +205,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 isLoadingHistory = false
             }
         }
-    }
-
-    fun startScan() {
-        event = "Модель ещё не подключена. Оборудование можно выбрать вручную и открыть его карточку."
-    }
-
-    fun clearScreen() = Unit
-
-    fun sendReport(comment: String) {
-        event = "Для сообщения нужен сохранённый осмотр. Сканирование пока недоступно."
     }
 
     fun consumeEvent() { event = null }

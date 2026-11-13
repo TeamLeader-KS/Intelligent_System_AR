@@ -227,6 +227,19 @@ func mobileFingerprint(root string) (string, error) {
 	return hex.EncodeToString(hash.Sum(nil)), err
 }
 
+func androidFingerprint() (string, error) {
+	code, err := mobileFingerprint("mobile")
+	if err != nil {
+		return "", err
+	}
+	model, err := fileSHA("ai/models/best_float16.tflite")
+	if err != nil {
+		return "", err
+	}
+	sum := sha256.Sum256([]byte(code + "\x00" + model))
+	return hex.EncodeToString(sum[:]), nil
+}
+
 func fileSHA(path string) (string, error) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -284,12 +297,12 @@ func buildAPK(ctx context.Context, directory, source string) error {
 	}
 	defer os.RemoveAll(temp)
 	cmd := exec.CommandContext(ctx, "docker", "build", "--platform", "linux/amd64",
-		"--file", "mobile/Dockerfile", "--output", "type=local,dest="+temp, "mobile")
+		"--file", "mobile/Dockerfile", "--output", "type=local,dest="+temp, ".")
 	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
 	if err := cmd.Run(); err != nil {
 		return err
 	}
-	current, err := mobileFingerprint("mobile")
+	current, err := androidFingerprint()
 	if err != nil {
 		return err
 	}
@@ -384,7 +397,7 @@ func runLocal() (result error) {
 	if err := os.MkdirAll(directory, 0755); err != nil {
 		return err
 	}
-	source, err := mobileFingerprint("mobile")
+	source, err := androidFingerprint()
 	if err != nil {
 		return err
 	}
