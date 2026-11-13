@@ -35,17 +35,16 @@ object ServerDiscovery {
             .callTimeout(800, TimeUnit.MILLISECONDS).followRedirects(false).followSslRedirects(false)
             .proxy(Proxy.NO_PROXY).build()
         try {
+            // An explicitly entered/saved server can be routed outside the Wi-Fi /24.
+            // Preserve its scheme, port and API path; never send credentials during discovery.
+            if (previous != ServerConfig.DEFAULT_URL) {
+                probe(client, previous)?.let { return@withContext it }
+            }
             val udp = try { broadcast(context, wifi, addresses) } catch (_: IOException) { null }
             if (udp != null) {
-                val host = HttpUrl.parse(udp)?.host()
-                if (host != null && probe(client, host) != null) return@withContext udp
+                probe(client, udp)?.let { return@withContext it }
             }
-            // Previous addresses are only tried within the current Wi-Fi /24.
             val prefixes = addresses.map { it.hostAddress!!.substringBeforeLast('.') }.distinct()
-            val saved = HttpUrl.parse(previous)?.host()
-            if (saved != null && prefixes.any { saved.startsWith("$it.") }) {
-                probe(client, saved)?.let { return@withContext it }
-            }
             // Some access points drop UDP broadcast. Probe only our service/port
             // on the connected Wi-Fi subnets, without credentials or Internet.
             val hosts = prefixes.flatMap { prefix -> (1..254).map { "$prefix.$it" } }
@@ -56,7 +55,7 @@ object ServerDiscovery {
                     launch {
                         gate.withPermit {
                             ensureActive()
-                            if (!found.isCompleted) probe(client, host)?.let { found.complete(it) }
+                            if (!found.isCompleted) probe(client, "http://$host:8001/industrial-vision/api/v1/")?.let { found.complete(it) }
                         }
                     }
                 }
@@ -75,17 +74,22 @@ object ServerDiscovery {
         }
     }
 
-    private fun probe(client: OkHttpClient, host: String): String? = try {
-        client.newCall(Request.Builder().url("http://$host:8001/industrial-vision/mobile-server").build())
+    internal fun probe(client: OkHttpClient, address: String): String? = try {
+        val normalized = ServerConfig.normalize(address)
+        val url = HttpUrl.parse(normalized)!!
+        val identityUrl = url.newBuilder()
+            .encodedPath(url.encodedPath().removeSuffix("api/v1/") + "mobile-server").build()
+        client.newCall(Request.Builder().url(identityUrl).build())
             .execute().use { response ->
                 if (!response.isSuccessful) null else {
                     val text = response.peekBody(1024).string()
                     val identity = Gson().fromJson(text, ServerIdentity::class.java)
-                    if (identity?.service == "industrial-vision" && identity.api_path == "/industrial-vision/api/v1/")
-                        "http://$host:8001/industrial-vision/api/v1/" else null
+                    if (identity?.service == "industrial-vision" && identity.api_path == url.encodedPath())
+                        normalized else null
                 }
             }
     } catch (_: IOException) { null } catch (_: JsonParseException) { null }
+      catch (_: IllegalArgumentException) { null }
 
     private suspend fun broadcast(context: Context, network: Network, addresses: List<Inet4Address>): String? {
         val manager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
