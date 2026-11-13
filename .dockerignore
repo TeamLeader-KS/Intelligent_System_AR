@@ -1,0 +1,15 @@
+**/.venv
+**/node_modules
+**/dist
+**/__pycache__
+.git
+.idea
+.playwright-mcp
+.env
+**/.env.*
+**/var/photos
+**/private.env
+# Android/AI sources and delivery archives are not inputs of the backend image.
+mobile/
+ai/
+*.zip

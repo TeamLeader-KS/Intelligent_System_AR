@@ -1,0 +1,77 @@
+services:
+  backend:
+    image: industrial-vision-api:${RELEASE_ID:-local}
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      args:
+        RELEASE_ID: "${RELEASE_ID:-local}"
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: "postgresql+psycopg://iv_app:${APP_DATABASE_PASSWORD:?database secret required}@database:5432/industrial_vision"
+      COOKIE_SECURE: "true"
+      ALLOWED_ORIGIN: "https://pet.oppennec.ru"
+      ROOT_PATH: /industrial-vision
+      APP_NAME: "${APP_NAME:-Industrial Vision API}"
+      # Explicit demo mode; no model or mock fallback is enabled by default.
+      ANALYSIS_MODE: "${ANALYSIS_MODE:-disabled}"
+      PHOTO_STORAGE: "${PHOTO_STORAGE:-local}"
+      PHOTO_ROOT: /app/photos
+      NEXTCLOUD_WEBDAV_URL: "${NEXTCLOUD_WEBDAV_URL:-}"
+      NEXTCLOUD_USERNAME: "${NEXTCLOUD_USERNAME:-}"
+      NEXTCLOUD_APP_PASSWORD: "${NEXTCLOUD_APP_PASSWORD:-}"
+    depends_on:
+      database:
+        condition: service_healthy
+    read_only: true
+    volumes:
+      - photos-data:/app/photos
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 256m
+    cpus: 1.0
+    networks:
+      data: {}
+      proxy:
+        aliases:
+          - industrial-vision-api
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz', timeout=2)"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  database:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?database secret required}"
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ${IV_PRIVATE_DIR:?private directory required}/init.sql:/docker-entrypoint-initdb.d/001-app.sql:ro
+    networks: [data]
+    mem_limit: 384m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    security_opt: [no-new-privileges:true]
+
+volumes:
+  photos-data:
+    name: industrial-vision-photos-data
+  postgres-data:
+    name: industrial-vision-postgres-data
+
+networks:
+  data:
+    internal: true
+  proxy:
+    external: true

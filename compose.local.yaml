@@ -1,0 +1,64 @@
+# Standalone installation on the enterprise LAN; does not join the public proxy.
+# Images must be built/downloaded before disconnecting from the Internet.
+services:
+  backend:
+    image: industrial-vision-api:local
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      args:
+        VITE_ANDROID_APK_URL: /industrial-vision/android.apk
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: "postgresql+psycopg://iv_app:${IV_LOCAL_DB_PASSWORD:?set local database password}@database:5432/industrial_vision"
+      ROOT_PATH: /industrial-vision
+      # HTTP demo on an isolated LAN. Use a local TLS proxy and secure cookies for HTTPS.
+      COOKIE_SECURE: "false"
+      ALLOWED_ORIGIN: "${IV_LOCAL_ORIGIN:-http://127.0.0.1:8001}"
+      ANALYSIS_MODE: disabled
+      PHOTO_STORAGE: local
+      PHOTO_ROOT: /app/photos
+      # Only the LAN installation exposes the locally built debug APK.
+      ANDROID_APK_PATH: /app/downloads/app-debug.apk
+      CV_EXAMPLE_PATH: /app/cv-demo/rust-pump-closeup.png
+      # Explicit opt-in to CLI-only synthetic accounts/equipment on the LAN demo.
+      LOCAL_DEMO_ENABLED: "true"
+    ports:
+      # Defaults to this computer only; explicitly choose its LAN address for phones.
+      - "${IV_LOCAL_BIND:-127.0.0.1}:8001:8000"
+    volumes:
+      - photos:/app/photos
+      - ./mobile/app/build/outputs/apk/debug:/app/downloads:ro
+      - ./ai/demo:/app/cv-demo:ro
+    depends_on:
+      database:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    networks: [local, data]
+  database:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD: "${IV_LOCAL_ADMIN_PASSWORD:?set a separate database administrator password}"
+      IV_LOCAL_DB_PASSWORD: "${IV_LOCAL_DB_PASSWORD:?set local application database password}"
+    volumes:
+      - database:/var/lib/postgresql/data
+      - ./deploy/local-init.sql:/docker-entrypoint-initdb.d/001-app.sql:ro
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    networks: [data]
+volumes:
+  photos: {}
+  database: {}
+networks:
+  local: {}
+  data:
+    internal: true
