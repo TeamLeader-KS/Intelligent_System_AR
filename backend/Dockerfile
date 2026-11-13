@@ -3,6 +3,7 @@ WORKDIR /site
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
 COPY frontend/ ./
+ARG VITE_ANDROID_APK_URL=""
 RUN npm run build
 
 FROM python:3.12-slim

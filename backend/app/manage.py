@@ -8,19 +8,20 @@ from .infrastructure.passwords import Passwords
 
 def main():
     parser=argparse.ArgumentParser()
-    parser.add_argument("command",choices=["create-admin", "seed-demo"])
+    parser.add_argument("command",choices=["create-admin", "seed-demo", "seed-pump-demo"])
     parser.add_argument("--login",default="niyaz")
     args=parser.parse_args()
-    if args.command == "seed-demo":
+    if args.command in ("seed-demo", "seed-pump-demo"):
         import json
-        from .infrastructure.demo import seed_demo
+        from .infrastructure.demo import seed_demo, seed_pump_demo
         password = getpass.getpass("Пароль демонстрационных сотрудников (от 12 символов): ")
         if password != getpass.getpass("Повторите пароль: "):
             parser.error("Пароли не совпадают")
         engine = make_engine(database_url())
         try:
             migrate(engine)
-            result = seed_demo(sessions(engine), password)
+            seed = seed_pump_demo if args.command == "seed-pump-demo" else seed_demo
+            result = seed(sessions(engine), password)
             print(json.dumps(result, ensure_ascii=False, indent=2))
         finally:
             engine.dispose()

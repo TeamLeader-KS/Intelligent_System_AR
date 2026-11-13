@@ -379,6 +379,19 @@ def create_app(url: str | None = None, *, secure: bool | None = None, origin: st
     @app.get("/redoc", include_in_schema=False)
     def redoc(user: Admin): return get_redoc_html(openapi_url=root_path+"/openapi.json",title="Industrial Vision API")
 
+    apk_path = os.getenv("ANDROID_APK_PATH")
+    if apk_path:
+        @app.get("/mobile-server", include_in_schema=False)
+        def mobile_server_identity():
+            return {"service":"industrial-vision", "api_path":(root_path or "") + "/api/v1/"}
+
+        @app.get("/android.apk", include_in_schema=False)
+        def android_download():
+            if not Path(apk_path).is_file():
+                raise HTTPException(404, "APK ещё не собран")
+            return FileResponse(apk_path, media_type="application/vnd.android.package-archive",
+                                filename="intelligent-system-ar-local.apk")
+
     frontend = Path(os.getenv("FRONTEND_DIR", "/app/frontend"))
     if frontend.is_dir():
         app.mount("/assets",StaticFiles(directory=frontend/"assets"),name="assets")

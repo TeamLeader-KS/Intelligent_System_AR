@@ -9,3 +9,7 @@
 **/.env.*
 **/var/photos
 **/private.env
+# Android/AI sources and delivery archives are not inputs of the backend image.
+mobile/
+ai/
+*.zip

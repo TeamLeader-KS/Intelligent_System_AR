@@ -6,7 +6,7 @@ from uuid import uuid5, NAMESPACE_URL
 from PIL import Image
 from sqlalchemy import select
 from app.application.dtos.analysis import PreviewResult, ImageSize
-from .models import Workshop, EquipmentType, Equipment, DefectType, User
+from .models import Workshop, EquipmentType, Equipment, EquipmentComponent, DefectType, User
 from .passwords import Passwords
 from .inspections import PostgresInspectionRepository
 from .photo_storage import photo_storages
@@ -15,6 +15,66 @@ DEMO_USERS = (("demo_worker", "ДЕМО · Рабочий", "WORKER", 1),
               ("demo_master", "ДЕМО · Мастер", "MASTER", 1),
               ("demo_engineer", "ДЕМО · Инженер", "ENGINEER", 1),
               ("demo_foreign", "ДЕМО · Другой цех", "WORKER", 2))
+
+
+def seed_pump_demo(session_factory, password: str) -> dict:
+    """Synthetic equipment cards for the real LAN API; no model or inspections fabricated."""
+    if not 12 <= len(password) <= 256:
+        raise ValueError("Демонстрационный пароль: 12–256 символов")
+    passwords = Passwords()
+    accounts = (("pump_worker", "ДЕМО · Оператор насоса", "WORKER"),
+                ("pump_engineer", "ДЕМО · Инженер насоса", "ENGINEER"))
+    with session_factory.begin() as db:
+        shop = db.scalar(select(Workshop).where(Workshop.name == "ДЕМО · Насосная станция"))
+        if shop is None:
+            shop = Workshop(name="ДЕМО · Насосная станция")
+            db.add(shop)
+            db.flush()
+        typ = db.scalar(select(EquipmentType).where(EquipmentType.name == "ДЕМО · Насосный агрегат"))
+        if typ is None:
+            typ = EquipmentType(name="ДЕМО · Насосный агрегат")
+            db.add(typ)
+            db.flush()
+        inventory = "pump_demo_001"
+        pump = db.scalar(select(Equipment).where(Equipment.inventory_number == inventory))
+        if pump is None:
+            pump = Equipment(name="ДЕМО · Центробежный насос", inventory_number=inventory,
+                workshop_id=shop.id, type_id=typ.id,
+                passport="Синтетическая карточка для проверки Android и локального API. "
+                    "Параметры, наработка и нормативы условные: это не паспорт реального насоса. "
+                    "Показания не получены от датчиков. Осмотры и результаты модели не сгенерированы.")
+            db.add(pump)
+            db.flush()
+        elif (pump.name, pump.workshop_id, pump.type_id) != ("ДЕМО · Центробежный насос", shop.id, typ.id):
+            raise ValueError("Демонстрационный инвентарный номер уже занят другой записью")
+        users = {}
+        for login, name, role in accounts:
+            user = db.scalar(select(User).where(User.login == login))
+            if user is None:
+                user = User(login=login, full_name=name, role=role, workshop_id=shop.id,
+                            active=True, password_hash=passwords.hash(password))
+                db.add(user)
+                db.flush()
+            elif (user.full_name, user.role, user.workshop_id, user.active) != (name, role, shop.id, True) or not passwords.verify(password, user.password_hash):
+                raise ValueError("Демонстрационный логин занят или пароль не совпадает; данные не изменены")
+            users[login] = user.id
+        components = (("ДЕМО · Насос", "Центробежный", [
+            {"name":"ДЕМО · Подача", "value":135, "unit":"м³/ч"},
+            {"name":"ДЕМО · Напор", "value":80, "unit":"м"}]),
+            ("ДЕМО · Электродвигатель", "Асинхронный", [
+            {"name":"ДЕМО · Мощность", "value":55, "unit":"кВт"},
+            {"name":"ДЕМО · Частота вращения", "value":3000, "unit":"об/мин"}]),
+            ("ДЕМО · Подшипниковый узел", "Условный узел", [
+            {"name":"ДЕМО · Температура", "value":55, "unit":"°C"},
+            {"name":"ДЕМО · Виброскорость", "value":2.2, "unit":"мм/с"}]))
+        for name, model, specs in components:
+            component = db.scalar(select(EquipmentComponent).where(EquipmentComponent.equipment_id == pump.id, EquipmentComponent.name == name))
+            if component is None:
+                db.add(EquipmentComponent(equipment_id=pump.id, name=name, model=model,
+                    specifications=specs, operating_hours=3500, lifetime_hours=16000,
+                    service_interval_hours=4000, last_service_hours=0))
+        return {"synthetic":True, "equipment_id":pump.id, "inventory_number":inventory,
+                "users":users, "note":"Условные параметры и нормативы; реальная модель не подключена. Пароли не выводятся."}
 
 
 def seed_demo(session_factory, password: str) -> dict:

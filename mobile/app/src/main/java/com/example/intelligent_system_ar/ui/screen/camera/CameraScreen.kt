@@ -361,6 +361,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -381,6 +382,7 @@ import androidx.lifecycle.LifecycleOwner
 import com.example.intelligent_system_ar.data.model.ScanStatus
 import com.example.intelligent_system_ar.ui.MainViewModel
 import com.example.intelligent_system_ar.ui.component.CameraOverlay
+import com.example.intelligent_system_ar.ui.component.EquipmentDialog
 import com.example.intelligent_system_ar.ui.component.ClearScreenButton
 import com.example.intelligent_system_ar.ui.component.MainTopBar
 import com.example.intelligent_system_ar.ui.component.ReportDialog
@@ -403,7 +405,8 @@ fun CameraScreen(viewModel: MainViewModel) {
     // Если токена нет, показываем экран входа
     if (viewModel.accessToken == null) {
         LoginScreen(
-            onLogin = { login, password -> viewModel.login(login, password) },
+            serverUrl = viewModel.serverUrl,
+            onLogin = { address, login, password -> viewModel.login(address, login, password) },
             isLoading = viewModel.isLoggingIn,
             error = viewModel.loginError
         )
@@ -427,6 +430,7 @@ fun CameraScreen(viewModel: MainViewModel) {
     }
 
     val user = viewModel.userState
+    var showEquipment by remember { mutableStateOf(true) }
     var showReportDialog by remember { mutableStateOf(false) }
 
     val event = viewModel.event
@@ -491,6 +495,11 @@ fun CameraScreen(viewModel: MainViewModel) {
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                TextButton(onClick = { showEquipment = true }, modifier = Modifier.fillMaxWidth()) {
+                    Text(viewModel.card?.name ?: "Выбрать оборудование", color = ArTextPrimary)
+                }
+                Text("Распознавание моделью ещё не подключено", color = ArTextPrimary,
+                    style = MaterialTheme.typography.bodySmall)
                 if (result != null && showCard) {
                     ResultCard(result)
                 } else {
@@ -503,7 +512,7 @@ fun CameraScreen(viewModel: MainViewModel) {
                 ) {
                     ScanButton(
                         isScanning = viewModel.isScanning,
-                        enabled = !viewModel.isScanning && hasCameraPermission,
+                        enabled = false,
                         onClick = { viewModel.startScan() },
                         modifier = Modifier.weight(3f).fillMaxHeight()
                     )
@@ -539,6 +548,10 @@ fun CameraScreen(viewModel: MainViewModel) {
                 )
             }
         }
+    }
+
+    if (showEquipment) {
+        EquipmentDialog(viewModel, onDismiss = { showEquipment = false })
     }
 
     // Диалог отправки сообщения

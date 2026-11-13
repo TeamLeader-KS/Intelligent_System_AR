@@ -1,254 +1,3 @@
-//package com.example.intelligent_system_ar.ui
-//
-//import android.app.Application
-//import android.content.Context
-//import androidx.compose.runtime.getValue
-//import androidx.compose.runtime.mutableStateOf
-//import androidx.compose.runtime.setValue
-//import androidx.lifecycle.AndroidViewModel
-//import androidx.lifecycle.viewModelScope
-//import com.example.intelligent_system_ar.data.model.DefectMark
-//import com.example.intelligent_system_ar.data.model.ScanResult
-//import com.example.intelligent_system_ar.data.model.ScanStatus
-//import com.example.intelligent_system_ar.data.model.UserState
-//import com.example.intelligent_system_ar.data.model.Workshop
-//import com.example.intelligent_system_ar.data.local.Employee
-//import com.example.intelligent_system_ar.data.remote.ApiClient
-//import com.example.intelligent_system_ar.data.remote.ServerConfig
-//import com.example.intelligent_system_ar.data.remote.model.BBox
-//import com.example.intelligent_system_ar.data.repository.DirectoryRepository
-//import com.example.intelligent_system_ar.data.repository.MockDirectoryRepository
-//import com.example.intelligent_system_ar.data.repository.RemoteDirectoryRepository
-//import kotlinx.coroutines.Job
-//import kotlinx.coroutines.delay
-//import kotlinx.coroutines.launch
-//import java.text.SimpleDateFormat
-//import java.util.Date
-//import java.util.Locale
-//
-//class MainViewModel(app: Application) : AndroidViewModel(app) {
-//
-//    private val prefs = app.getSharedPreferences("user_prefs", Context.MODE_PRIVATE)
-//
-//    // Сервер или заглушка — переключается в ServerConfig.USE_MOCK
-//    private val directory: DirectoryRepository =
-//        if (ServerConfig.USE_MOCK) MockDirectoryRepository()
-//        else RemoteDirectoryRepository(ApiClient.directoryApi)
-//
-//    var userState by mutableStateOf(loadUser())
-//        private set
-//
-//    var registration by mutableStateOf(RegistrationUi())
-//        private set
-//
-//    var isScanning by mutableStateOf(false)
-//        private set
-//
-//    // null — ещё не сканировали
-//    var scanResult by mutableStateOf<ScanResult?>(null)
-//        private set
-//
-//    // Одноразовое сообщение для Snackbar
-//    var event by mutableStateOf<String?>(null)
-//        private set
-//
-//    private var mockIndex = 0
-//
-//    // ---------- Сохранённый пользователь ----------
-//
-//    private fun loadUser() = UserState(
-//        employeeId = prefs.getInt("id", 0),
-//        employeeName = prefs.getString("name", "") ?: "",
-//        role = prefs.getString("role", "") ?: "",
-//        workshopId = prefs.getInt("workshopId", 0),
-//        workshop = prefs.getString("workshop", "") ?: ""
-//    )
-//
-//    private fun saveUser() {
-//        prefs.edit()
-//            .putInt("id", userState.employeeId)
-//            .putString("name", userState.employeeName)
-//            .putString("role", userState.role)
-//            .putInt("workshopId", userState.workshopId)
-//            .putString("workshop", userState.workshop)
-//            .apply()
-//    }
-//
-//    // ---------- Регистрация: цех -> должность -> Ф.И.О. ----------
-//
-//    private var loadToken = 0
-//    private var retryAction: (() -> Unit)? = null
-//
-//    fun openRegistration() {
-//        registration = RegistrationUi()
-//        loadWorkshops()
-//    }
-//
-//    fun onWorkshopSelected(workshop: Workshop) {
-//        registration = registration.copy(
-//            selectedWorkshop = workshop,
-//            roles = emptyList(), selectedRole = null,
-//            employees = emptyList(), selectedEmployee = null
-//        )
-//        loadRoles(workshop.id)
-//    }
-//
-//    fun onRoleSelected(role: String) {
-//        val workshop = registration.selectedWorkshop ?: return
-//        registration = registration.copy(
-//            selectedRole = role,
-//            employees = emptyList(), selectedEmployee = null
-//        )
-//        loadEmployees(workshop.id, role)
-//    }
-//
-//    fun onEmployeeSelected(employee: Employee) {
-//        registration = registration.copy(selectedEmployee = employee)
-//    }
-//
-//    fun retryLoad() {
-//        retryAction?.invoke()
-//    }
-//
-//    fun confirmRegistration() {
-//        val workshop = registration.selectedWorkshop ?: return
-//        val employee = registration.selectedEmployee ?: return
-//        userState = UserState(
-//            employeeId = employee.id,
-//            employeeName = employee.name,
-//            role = employee.role,
-//            workshopId = workshop.id,
-//            workshop = workshop.name
-//        )
-//        saveUser()
-//        event = "Вы вошли как ${employee.name}"
-//    }
-//
-//    private fun loadWorkshops() {
-//        retryAction = { loadWorkshops() }
-//        load {
-//            directory.getWorkshops()
-//                .onSuccess { registration = registration.copy(workshops = it) }
-//                .onFailure { showLoadError() }
-//        }
-//    }
-//
-//    private fun loadRoles(workshopId: Int) {
-//        retryAction = { loadRoles(workshopId) }
-//        load {
-//            directory.getRoles(workshopId)
-//                .onSuccess { registration = registration.copy(roles = it) }
-//                .onFailure { showLoadError() }
-//        }
-//    }
-//
-//    private fun loadEmployees(workshopId: Int, role: String) {
-//        retryAction = { loadEmployees(workshopId, role) }
-//        load {
-//            directory.getEmployees(workshopId, role)
-//                .onSuccess { registration = registration.copy(employees = it) }
-//                .onFailure { showLoadError() }
-//        }
-//    }
-//
-//    private fun showLoadError() {
-//        registration = registration.copy(error = "Не удалось загрузить данные с сервера")
-//    }
-//
-//    // token защищает от устаревших ответов, если пользователь быстро меняет выбор
-//    private fun load(block: suspend () -> Unit) {
-//        val token = ++loadToken
-//        registration = registration.copy(isLoading = true, error = null)
-//        viewModelScope.launch {
-//            block()
-//            if (token == loadToken) registration = registration.copy(isLoading = false)
-//        }
-//    }
-//
-//    // ---------- Сканирование (заглушки) ----------
-//
-//    private val mockResults = listOf(
-//        // Как на макете: компрессор, поломка двигателя
-//        ScanResult(
-//            equipmentName = "Компрессор",
-//            status = ScanStatus.CRITICAL,
-//            equipmentBox = BBox(0.12f, 0.28f, 0.88f, 0.58f),
-//            defects = listOf(
-//                DefectMark(
-//                    title = "Поломка двигателя",
-//                    box = BBox(0.18f, 0.30f, 0.46f, 0.43f),
-//                    recommendation = "Остановить компрессор и вызвать слесаря для осмотра двигателя."
-//                )
-//            )
-//        ),
-//        ScanResult(
-//            equipmentName = "Саморез",
-//            status = ScanStatus.WARNING,
-//            equipmentBox = BBox(0.30f, 0.38f, 0.66f, 0.54f),
-//            defects = listOf(
-//                DefectMark(
-//                    title = "Недокручен",
-//                    box = BBox(0.42f, 0.40f, 0.54f, 0.52f),
-//                    recommendation = "Докрутить саморез до упора."
-//                )
-//            )
-//        ),
-//        ScanResult(
-//            equipmentName = "Саморез",
-//            status = ScanStatus.CRITICAL,
-//            equipmentBox = BBox(0.30f, 0.38f, 0.66f, 0.54f),
-//            defects = listOf(
-//                DefectMark(
-//                    title = "Отсутствует",
-//                    box = BBox(0.42f, 0.40f, 0.54f, 0.52f),
-//                    recommendation = "Установить новый саморез и сообщить мастеру цеха."
-//                )
-//            )
-//        ),
-//        ScanResult(
-//            equipmentName = "Компрессор",
-//            status = ScanStatus.OK,
-//            equipmentBox = BBox(0.12f, 0.28f, 0.88f, 0.58f),
-//            defects = emptyList()
-//        )
-//    )
-//
-//    private var scanJob: Job? = null
-//
-//    // TODO: заменить имитацию на запрос /detect (кадр -> DetectResponse -> ScanResult)
-//    fun startScan() {
-//        if (isScanning) return
-//        isScanning = true
-//        scanResult = null
-//
-//        scanJob = viewModelScope.launch {
-//            delay(1500)
-//            scanResult = mockResults[mockIndex % mockResults.size]
-//            mockIndex++
-//            isScanning = false
-//        }
-//    }
-//
-//    /** Кнопка «Очистить экран»: убирает рамки и карточку, отменяет анализ, если он ещё идёт. */
-//    fun clearScreen() {
-//        scanJob?.cancel()
-//        scanJob = null
-//        isScanning = false
-//        scanResult = null
-//    }
-//
-//    // TODO: заменить на запрос /alert + запись инцидента в журнал (автор = userState.employeeId)
-//    fun sendReport(comment: String) {
-//        if (!userState.isRegistered) return
-//        val time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
-//        event = "Сообщение отправлено мастеру цеха · $time"
-//    }
-//
-//    fun consumeEvent() {
-//        event = null
-//    }
-//}
-
 package com.example.intelligent_system_ar.ui
 
 import android.app.Application
@@ -258,150 +7,244 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.intelligent_system_ar.data.model.DefectMark
 import com.example.intelligent_system_ar.data.model.ScanResult
-import com.example.intelligent_system_ar.data.model.ScanStatus
 import com.example.intelligent_system_ar.data.model.UserState
 import com.example.intelligent_system_ar.data.remote.ApiClient
-import com.example.intelligent_system_ar.data.remote.model.BBox
-import com.example.intelligent_system_ar.data.remote.model.LoginRequest
-import com.example.intelligent_system_ar.data.remote.model.TokenResponse
+import com.example.intelligent_system_ar.data.remote.DirectoryApi
+import com.example.intelligent_system_ar.data.remote.ServerConfig
+import com.example.intelligent_system_ar.data.remote.model.*
+import com.google.gson.JsonParseException
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import retrofit2.HttpException
+import java.io.IOException
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {
+    private val prefs = app.getSharedPreferences("local_server_session", Context.MODE_PRIVATE)
+    var serverUrl by mutableStateOf(prefs.getString("server_url", ServerConfig.DEFAULT_URL)!!)
+        private set
+    private var api = ApiClient.create(serverUrl)
 
-    private val prefs = app.getSharedPreferences("user_prefs", Context.MODE_PRIVATE)
-
-    // --- Состояние авторизации ---
     var accessToken by mutableStateOf<String?>(null)
         private set
-
     var isLoggingIn by mutableStateOf(false)
         private set
-
     var loginError by mutableStateOf<String?>(null)
         private set
-
-    // --- Основные состояния ---
     var userState by mutableStateOf(UserState())
         private set
-
-    var isScanning by mutableStateOf(false)
+    var equipment by mutableStateOf<List<EquipmentDto>>(emptyList())
         private set
-
-    var scanResult by mutableStateOf<ScanResult?>(null)
+    var card by mutableStateOf<EquipmentCardDto?>(null)
         private set
-
+    var history by mutableStateOf<InspectionHistoryDto?>(null)
+        private set
+    var isLoadingEquipment by mutableStateOf(false)
+        private set
+    var isLoadingCard by mutableStateOf(false)
+        private set
+    var isLoadingHistory by mutableStateOf(false)
+        private set
+    var equipmentError by mutableStateOf<String?>(null)
+        private set
+    var cardError by mutableStateOf<String?>(null)
+        private set
+    var historyError by mutableStateOf<String?>(null)
+        private set
     var event by mutableStateOf<String?>(null)
         private set
 
-    // ---------- Авторизация ----------
+    // Сканирование включается только после подключения реального локального CV.
+    val isScanning = false
+    val scanResult: ScanResult? = null
+    private var sessionJob: Job? = null
+    private var equipmentJob: Job? = null
+    private var cardJob: Job? = null
+    private var historyJob: Job? = null
 
-    fun login(login: String, password: String) {
+    fun login(address: String, login: String, password: String) {
         if (isLoggingIn) return
-        isLoggingIn = true
-        loginError = null
+        val normalized = try {
+            ServerConfig.normalize(address)
+        } catch (e: IllegalArgumentException) {
+            loginError = e.message
+            return
+        }
+        serverUrl = normalized
+        api = ApiClient.create(normalized)
+        prefs.edit().putString("server_url", normalized).remove("access_token").apply()
+        authenticate { client -> client.login(LoginRequest(login.trim(), password)).let { it.accessToken to it.user } }
+    }
 
-        viewModelScope.launch {
+    fun restoreSession() {
+        if (isLoggingIn) return
+        val saved = prefs.getString("access_token", null) ?: return
+        authenticate { client -> saved to client.me("Bearer $saved") }
+    }
+
+    private fun authenticate(load: suspend (DirectoryApi) -> Pair<String, AccountDto>) {
+        sessionJob = viewModelScope.launch {
+            isLoggingIn = true
+            loginError = null
             try {
-                // 1. Отправляем логин и пароль на сервер
-                val response = ApiClient.directoryApi.login(LoginRequest(login, password))
-                accessToken = response.accessToken
-
-                // 2. Сохраняем токен (в идеале использовать EncryptedSharedPreferences)
-                prefs.edit().putString("access_token", response.accessToken).apply()
-
-                event = "Вход выполнен успешно!"
-                isLoggingIn = false
-            } catch (e: Exception) {
-                loginError = "Ошибка входа: ${e.message}"
+                val (token, user) = load(api)
+                userState = user.toUserState()
+                accessToken = token
+                prefs.edit().putString("access_token", token).apply()
+                refreshEquipment()
+            } catch (e: HttpException) {
+                if (e.code() == 401) prefs.edit().remove("access_token").apply()
+                loginError = message(e)
+            } catch (e: IOException) {
+                loginError = message(e)
+            } catch (e: JsonParseException) {
+                loginError = "Ответ сервера не соответствует приложению"
+            } finally {
                 isLoggingIn = false
             }
         }
     }
 
     fun logout() {
+        sessionJob?.cancel()
+        equipmentJob?.cancel()
+        cardJob?.cancel()
+        historyJob?.cancel()
         accessToken = null
         prefs.edit().remove("access_token").apply()
         userState = UserState()
-        clearScreen()
+        equipment = emptyList()
+        card = null
+        history = null
+        equipmentError = null
+        cardError = null
+        historyError = null
+        event = null
+        isLoggingIn = false
+        isLoadingEquipment = false
+        isLoadingCard = false
+        isLoadingHistory = false
     }
 
-    fun checkSavedToken() {
-        val token = prefs.getString("access_token", null)
-        if (token != null) {
-            accessToken = token
+    fun refreshEquipment() {
+        val token = accessToken ?: return
+        equipmentJob?.cancel()
+        equipmentJob = viewModelScope.launch {
+            isLoadingEquipment = true
+            equipmentError = null
+            try {
+                equipment = api.getEquipment("Bearer $token")
+                val shops = api.workshops("Bearer $token")
+                userState = userState.copy(workshop = shops.firstOrNull { it.id == userState.workshopId }?.name
+                    ?: if (userState.workshopId == 0) "Все цеха" else "Цех №${userState.workshopId}")
+            } catch (e: HttpException) {
+                equipmentError = authenticatedError(e)
+            } catch (e: IOException) {
+                equipmentError = message(e)
+            } catch (e: JsonParseException) {
+                equipmentError = "Не удалось прочитать список оборудования"
+            } finally {
+                isLoadingEquipment = false
+            }
         }
     }
 
-    // ---------- Сканирование ----------
+    fun selectEquipment(id: Int) = loadCard { token -> api.card(token, id) }
 
-    private val mockResults = listOf(
-        ScanResult(
-            equipmentName = "Компрессор",
-            status = ScanStatus.CRITICAL,
-            equipmentBox = BBox(0.12f, 0.28f, 0.88f, 0.58f),
-            defects = listOf(
-                DefectMark(
-                    title = "Поломка двигателя",
-                    box = BBox(0.18f, 0.30f, 0.46f, 0.43f),
-                    recommendation = "Остановить компрессор и вызвать слесаря для осмотра двигателя."
-                )
-            )
-        ),
-        ScanResult(
-            equipmentName = "Саморез",
-            status = ScanStatus.WARNING,
-            equipmentBox = BBox(0.30f, 0.38f, 0.66f, 0.54f),
-            defects = listOf(
-                DefectMark(
-                    title = "Недокручен",
-                    box = BBox(0.42f, 0.40f, 0.54f, 0.52f),
-                    recommendation = "Докрутить саморез до упора."
-                )
-            )
-        )
-    )
+    fun resolveEquipment(code: String) {
+        if (code.isBlank()) return
+        loadCard { token -> api.resolve(token, code.trim()) }
+    }
 
-    private var scanJob: Job? = null
-    private var mockIndex = 0
+    private fun loadCard(load: suspend (String) -> EquipmentCardDto) {
+        val token = accessToken ?: return
+        cardJob?.cancel()
+        historyJob?.cancel()
+        card = null
+        history = null
+        historyError = null
+        isLoadingHistory = false
+        cardJob = viewModelScope.launch {
+            isLoadingCard = true
+            cardError = null
+            try {
+                card = load("Bearer $token")
+            } catch (e: HttpException) {
+                cardError = authenticatedError(e)
+            } catch (e: IOException) {
+                cardError = message(e)
+            } catch (e: JsonParseException) {
+                cardError = "Не удалось прочитать карточку оборудования"
+            } finally {
+                isLoadingCard = false
+            }
+        }
+    }
+
+    fun loadHistory() {
+        val token = accessToken ?: return
+        val id = card?.id ?: return
+        historyJob?.cancel()
+        historyJob = viewModelScope.launch {
+            isLoadingHistory = true
+            historyError = null
+            try {
+                history = api.history("Bearer $token", id)
+            } catch (e: HttpException) {
+                historyError = authenticatedError(e)
+            } catch (e: IOException) {
+                historyError = message(e)
+            } catch (e: JsonParseException) {
+                historyError = "Не удалось прочитать историю осмотров"
+            } finally {
+                isLoadingHistory = false
+            }
+        }
+    }
 
     fun startScan() {
-        if (isScanning) return
-        isScanning = true
-        scanResult = null
-
-        scanJob = viewModelScope.launch {
-            delay(1500) // Имитация сети
-            scanResult = mockResults[mockIndex % mockResults.size]
-            mockIndex++
-            isScanning = false
-        }
+        event = "Модель ещё не подключена. Оборудование можно выбрать вручную и открыть его карточку."
     }
 
-    fun clearScreen() {
-        scanJob?.cancel()
-        scanJob = null
-        isScanning = false
-        scanResult = null
-    }
+    fun clearScreen() = Unit
 
     fun sendReport(comment: String) {
-        val time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
-        event = "Сообщение отправлено мастеру цеха · $time"
+        event = "Для сообщения нужен сохранённый осмотр. Сканирование пока недоступно."
     }
 
-    fun consumeEvent() {
-        event = null
+    fun consumeEvent() { event = null }
+
+    private fun AccountDto.toUserState() = UserState(
+        employeeId = id, employeeName = fullName, workshopId = workshopId ?: 0,
+        workshop = if (workshopId == null) "Все цеха" else "Цех №$workshopId",
+        role = when (role) {
+            "ADMIN" -> "Администратор"
+            "WORKER" -> "Рабочий"
+            "MASTER" -> "Мастер"
+            "ENGINEER" -> "Инженер"
+            "HEAD" -> "Руководитель"
+            else -> role
+        }
+    )
+
+    private fun authenticatedError(e: HttpException): String {
+        if (e.code() == 401) {
+            logout()
+            loginError = "Сессия истекла. Войдите снова."
+        }
+        return message(e)
     }
 
-    init {
-        // При создании ViewModel проверяем, сохранен ли токен
-        checkSavedToken()
+    private fun message(e: Exception): String = when (e) {
+        is HttpException -> when (e.code()) {
+            401 -> "Неверный логин, пароль или истёкший токен"
+            403 -> "Нет доступа к этим данным"
+            404 -> "Оборудование или API не найдено. Проверьте адрес сервера."
+            429 -> "Слишком много попыток. Повторите позже."
+            else -> "Сервер вернул ошибку ${e.code()}"
+        }
+        else -> "Нет связи с сервером. Проверьте адрес, Wi-Fi и запуск бэкенда."
     }
+
+    init { restoreSession() }
 }

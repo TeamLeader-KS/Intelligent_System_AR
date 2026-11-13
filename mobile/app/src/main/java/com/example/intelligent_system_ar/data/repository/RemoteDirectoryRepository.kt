@@ -38,7 +38,7 @@ class RemoteDirectoryRepository(private val api: DirectoryApi) {
                 id = dto.id,
                 name = dto.name,
                 workshopId = dto.workshopId,
-                status = dto.status
+                status = "UNKNOWN"
             )
         }
     }
