@@ -1,2 +1,120 @@
-include:
-  - compose.server.yaml
+# Portable demo: Docker Desktop (Linux containers) or Docker Engine + Compose.
+name: industrial-vision-demo
+
+x-app: &app
+  image: industrial-vision-demo-api:local
+  build:
+    context: .
+    dockerfile: backend/Dockerfile
+    args:
+      VITE_ANDROID_APK_URL: /industrial-vision/android.apk
+  environment:
+    LOCAL_DEMO_ENABLED: "true"
+    ROOT_PATH: /industrial-vision
+    COOKIE_SECURE: "false"
+    ALLOWED_ORIGIN: "${IV_LOCAL_ORIGIN:-http://localhost:8001}"
+    ANALYSIS_MODE: disabled
+    PHOTO_STORAGE: local
+    PHOTO_ROOT: /app/photos
+    ANDROID_APK_PATH: /app/downloads/app-debug.apk
+    CV_EXAMPLE_PATH: /app/cv-demo/rust-pump-closeup.png
+  networks: [data, local]
+
+services:
+  setup:
+    <<: *app
+    command: [python, -m, app.manage, prepare-local]
+    volumes:
+      - secrets:/app/local-secrets
+      - downloads:/app/downloads
+    restart: "no"
+
+  database:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD_FILE: /run/iv-secrets/IV_LOCAL_ADMIN_PASSWORD
+    entrypoint: [/bin/sh, -ec]
+    command:
+      - |
+        export IV_LOCAL_DB_PASSWORD="$$(cat /run/iv-secrets/IV_LOCAL_DB_PASSWORD)"
+        exec docker-entrypoint.sh postgres
+    volumes:
+      - database:/var/lib/postgresql/data
+      - secrets:/run/iv-secrets:ro
+      - ./deploy/local-init.sql:/docker-entrypoint-initdb.d/001-app.sql:ro
+    depends_on:
+      setup:
+        condition: service_completed_successfully
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+    networks: [data]
+
+  backend:
+    <<: *app
+    command: [python, -m, app.manage, serve-local]
+    ports:
+      - "${IV_DEMO_PORT:-8001}:8000"
+    volumes:
+      - secrets:/app/local-secrets:ro
+      - downloads:/app/downloads:ro
+      - photos:/app/photos
+      - ./ai/demo:/app/cv-demo:ro
+    depends_on:
+      database:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=2)"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    read_only: true
+    tmpfs: ["/tmp:size=16m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+
+  bootstrap:
+    <<: *app
+    command: [python, -m, app.manage, bootstrap-local-files]
+    volumes:
+      - secrets:/app/local-secrets:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: "no"
+
+  apk:
+    image: industrial-vision-demo-android:local
+    platform: linux/amd64
+    build:
+      context: .
+      dockerfile: mobile/Dockerfile
+      target: runtime
+    volumes:
+      - downloads:/outputs
+      - android-sdk:/opt/android-sdk
+      - gradle:/root/.gradle
+      - android-signing:/root/.android
+    depends_on:
+      setup:
+        condition: service_completed_successfully
+    restart: "no"
+    networks: [local]
+
+volumes:
+  secrets: {}
+  database: {}
+  photos: {}
+  downloads: {}
+  android-sdk: {}
+  gradle: {}
+  android-signing: {}
+networks:
+  local: {}
+  data:
+    internal: true
