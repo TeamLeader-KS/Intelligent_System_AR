@@ -39,8 +39,9 @@ import com.example.intelligent_system_ar.data.model.ScanStatus
 import com.example.intelligent_system_ar.ui.MainViewModel
 import com.example.intelligent_system_ar.ui.component.*
 import com.example.intelligent_system_ar.ui.theme.*
-import com.example.intelligent_system_ar.utils.Detection
-import com.example.intelligent_system_ar.utils.ObjectDetectorHelper
+import com.example.intelligent_system_ar.data.ml.Detection
+import com.example.intelligent_system_ar.data.ml.ObjectDetectorHelper
+import com.example.intelligent_system_ar.data.ml.*
 import java.util.concurrent.Executors
 
 @Composable
