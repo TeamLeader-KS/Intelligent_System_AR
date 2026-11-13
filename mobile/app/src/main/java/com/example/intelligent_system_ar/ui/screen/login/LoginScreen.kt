@@ -18,6 +18,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import com.example.intelligent_system_ar.data.remote.ServerConfig
 import com.example.intelligent_system_ar.data.remote.ServerDiscovery
 import com.example.intelligent_system_ar.ui.theme.ArBackground
 import com.example.intelligent_system_ar.ui.theme.ArTextPrimary
@@ -34,31 +35,42 @@ fun LoginScreen(
     val context = LocalContext.current
     val focus = LocalFocusManager.current
     val scope = rememberCoroutineScope()
-    var address by remember { mutableStateOf<String?>(null) }
+    var address by remember { mutableStateOf(serverUrl.takeUnless { it == ServerConfig.DEFAULT_URL }.orEmpty()) }
+    var addressError by remember { mutableStateOf<String?>(null) }
     var searching by remember { mutableStateOf(false) }
     var searchMessage by remember { mutableStateOf("Ищем сервер в Wi-Fi…") }
     var searchedAutomatically by remember { mutableStateOf(false) }
     var login by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
-    val canSubmit = address != null && login.isNotBlank() && password.isNotBlank() && !isLoading && !searching
+    val canSubmit = address.isNotBlank() && login.isNotBlank() && password.isNotBlank() && !isLoading && !searching
 
     fun submit() {
         if (canSubmit) {
             focus.clearFocus()
-            onLogin(address!!, login, password)
+            val normalized = try {
+                ServerConfig.normalize(address)
+            } catch (e: IllegalArgumentException) {
+                addressError = e.message
+                return
+            }
+            addressError = null
+            onLogin(normalized, login, password)
         }
     }
 
     suspend fun search() {
         if (searching) return
         searching = true
-        address = null
         searchMessage = "Ищем сервер в Wi-Fi…"
         try {
-            address = ServerDiscovery.find(context, serverUrl)
-            searchMessage = if (address != null) "Сервер найден"
-                else "Сервер не найден. Проверьте Wi-Fi и запуск проекта на ноутбуке, затем повторите поиск."
+            val found = ServerDiscovery.find(context, address.ifBlank { serverUrl })
+            if (found != null) {
+                address = found
+                addressError = null
+            }
+            searchMessage = if (found != null) "Сервер найден"
+                else "Сервер не найден автоматически. Укажите адрес компьютера ниже или повторите поиск."
         } catch (_: IOException) {
             searchMessage = "Нет доступа к Wi-Fi. Подключитесь к сети ноутбука."
         } catch (_: SecurityException) {
@@ -86,12 +98,24 @@ fun LoginScreen(
                 Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(searchMessage, color = ArTextPrimary)
                     if (searching) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                    address?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
                     TextButton(onClick = { scope.launch { search() } }, enabled = !searching && !isLoading) {
                         Text(if (searching) "Поиск…" else "Найти сервер в Wi-Fi")
                     }
                 }
             }
+            OutlinedTextField(
+                value = address,
+                onValueChange = { address = it; addressError = null },
+                label = { Text("Адрес сервера") },
+                placeholder = { Text("http://192.168.3.47:8001") },
+                supportingText = {
+                    Text(addressError ?: "IP компьютера из ipconfig, порт 8001. Можно вставить полную ссылку API.")
+                },
+                isError = addressError != null,
+                enabled = !isLoading && !searching, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(autoCorrectEnabled = false, keyboardType = KeyboardType.Uri, imeAction = ImeAction.Next),
+                keyboardActions = KeyboardActions(onNext = { focus.moveFocus(FocusDirection.Next) })
+            )
             OutlinedTextField(
                 value = login, onValueChange = { login = it }, label = { Text("Логин") },
                 enabled = !isLoading, singleLine = true, modifier = Modifier.fillMaxWidth(),
