@@ -1,0 +1,5 @@
+# Docker executes these files in Linux containers, including Windows checkouts.
+*.sh text eol=lf
+gradlew text eol=lf
+Dockerfile text eol=lf
+Makefile text eol=lf

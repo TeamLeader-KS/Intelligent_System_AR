@@ -2,23 +2,64 @@
 import argparse
 import getpass
 import sys
+import os
+import json
+import secrets
+from pathlib import Path
 from .infrastructure.database import database_url, make_engine, migrate, sessions
 from .infrastructure.repository import Repository
 from .infrastructure.passwords import Passwords
 
+LOCAL_KEYS = ("IV_LOCAL_DB_PASSWORD", "IV_LOCAL_ADMIN_PASSWORD", "IV_DEMO_PASSWORD", "IV_DEMO_ADMIN_PASSWORD")
+
+def prepare_local_files(directory: Path) -> None:
+    directory.mkdir(parents=True, exist_ok=True)
+    for key in LOCAL_KEYS:
+        path = directory / key
+        try:
+            with path.open("x") as file:
+                file.write(secrets.token_hex(24))
+            # This Docker volume is shared read-only with the application and PostgreSQL.
+            path.chmod(0o444)
+        except FileExistsError:
+            pass
+        value = path.read_text().strip()
+        if len(value) < 12 or any(c not in "0123456789abcdef" for c in value):
+            raise ValueError(f"Некорректный сохранённый секрет {key}; существующие данные не изменены")
+
+def local_database(directory: Path) -> None:
+    password = (directory / "IV_LOCAL_DB_PASSWORD").read_text().strip()
+    os.environ["DATABASE_URL"] = f"postgresql+psycopg://iv_app:{password}@database:5432/industrial_vision"
+
 def main():
     parser=argparse.ArgumentParser()
-    parser.add_argument("command",choices=["create-admin", "seed-demo", "seed-pump-demo", "bootstrap-local"])
+    parser.add_argument("command",choices=["create-admin", "seed-demo", "seed-pump-demo", "bootstrap-local", "prepare-local", "serve-local", "bootstrap-local-files"])
     parser.add_argument("--login",default="niyaz")
+    parser.add_argument("--secrets-dir", type=Path, default=Path("/app/local-secrets"))
     args=parser.parse_args()
-    if args.command == "bootstrap-local":
-        import json
-        import os
+    if args.command in ("prepare-local", "serve-local", "bootstrap-local-files"):
+        if os.getenv("LOCAL_DEMO_ENABLED") != "true":
+            parser.error("Локальные команды разрешены только при LOCAL_DEMO_ENABLED=true")
+        if args.command == "prepare-local":
+            prepare_local_files(args.secrets_dir)
+            downloads = Path("/app/downloads")
+            if not (downloads / "app-debug.apk").exists():
+                status = downloads / ".setup-build-status.tmp"
+                status.write_text('{"state":"BUILDING"}')
+                status.chmod(0o644)
+                status.replace(downloads / "build-status.json")
+            print("Локальные пароли подготовлены; существующие пароли сохранены.")
+            return
+        local_database(args.secrets_dir)
+        if args.command == "serve-local":
+            os.execvp("uvicorn", ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"])
+    if args.command in ("bootstrap-local", "bootstrap-local-files"):
         from .infrastructure.demo import seed_pump_demo
         if os.getenv("LOCAL_DEMO_ENABLED") != "true":
             parser.error("bootstrap-local разрешён только при LOCAL_DEMO_ENABLED=true")
         try:
-            raw = sys.stdin.read(4097)
+            raw = json.dumps({"employee_password": (args.secrets_dir / "IV_DEMO_PASSWORD").read_text().strip(),
+                              "admin_password": (args.secrets_dir / "IV_DEMO_ADMIN_PASSWORD").read_text().strip()}) if args.command == "bootstrap-local-files" else sys.stdin.read(4097)
             if len(raw) > 4096:
                 parser.error("Слишком большой запрос подготовки демоданных")
             credentials = json.loads(raw)
@@ -31,13 +72,16 @@ def main():
             migrate(engine)
             result = seed_pump_demo(sessions(engine), credentials["employee_password"], admin_password=credentials["admin_password"])
             print(json.dumps(result, ensure_ascii=False))
+            if args.command == "bootstrap-local-files":
+                print("Сайт: http://localhost:8001/industrial-vision/")
+                print("Администратор: demo_admin /", credentials["admin_password"])
+                print("Android: pump_worker или pump_engineer /", credentials["employee_password"])
         except ValueError as exc:
             parser.error(str(exc))
         finally:
             engine.dispose()
         return
     if args.command in ("seed-demo", "seed-pump-demo"):
-        import json
         from .infrastructure.demo import seed_demo, seed_pump_demo
         password = getpass.getpass("Пароль демонстрационных сотрудников (от 12 символов): ")
         if password != getpass.getpass("Повторите пароль: "):
