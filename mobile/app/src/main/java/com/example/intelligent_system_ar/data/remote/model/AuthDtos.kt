@@ -11,6 +11,7 @@ data class TokenResponse(
 
 data class AccountDto(
     val id: Int,
+    val login: String,
     @SerializedName("full_name") val fullName: String,
     val role: String,
     @SerializedName("workshop_id") val workshopId: Int?

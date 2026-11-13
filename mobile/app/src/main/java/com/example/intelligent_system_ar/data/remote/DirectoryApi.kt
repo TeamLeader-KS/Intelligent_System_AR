@@ -3,10 +3,7 @@ package com.example.intelligent_system_ar.data.remote
 import com.example.intelligent_system_ar.data.remote.model.*
 import retrofit2.http.*
 
-interface DirectoryApi {
-    @POST("auth/token")
-    suspend fun login(@Body request: LoginRequest): TokenResponse
-
+interface DirectoryApi : AuthApi {
     @GET("me")
     suspend fun me(@Header("Authorization") token: String): AccountDto
 

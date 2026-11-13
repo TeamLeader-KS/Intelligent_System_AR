@@ -9,6 +9,9 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.intelligent_system_ar.data.model.ScanResult
 import com.example.intelligent_system_ar.data.model.UserState
+import com.example.intelligent_system_ar.data.auth.TokenStore
+import com.example.intelligent_system_ar.data.repository.AuthRepository
+import com.example.intelligent_system_ar.data.repository.LoginException
 import com.example.intelligent_system_ar.data.remote.ApiClient
 import com.example.intelligent_system_ar.data.remote.DirectoryApi
 import com.example.intelligent_system_ar.data.remote.ServerConfig
@@ -21,6 +24,7 @@ import java.io.IOException
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val prefs = app.getSharedPreferences("local_server_session", Context.MODE_PRIVATE)
+    private val tokenStore = TokenStore(app)
     var serverUrl by mutableStateOf(prefs.getString("server_url", ServerConfig.DEFAULT_URL)!!)
         private set
     private var api = ApiClient.create(serverUrl)
@@ -72,13 +76,16 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
         serverUrl = normalized
         api = ApiClient.create(normalized)
+        tokenStore.clear()
         prefs.edit().putString("server_url", normalized).remove("access_token").apply()
-        authenticate { client -> client.login(LoginRequest(login.trim(), password)).let { it.accessToken to it.user } }
+        authenticate { client ->
+            AuthRepository(client, tokenStore).login(login.trim(), password).getOrThrow().let { it.accessToken to it.user }
+        }
     }
 
     fun restoreSession() {
         if (isLoggingIn) return
-        val saved = prefs.getString("access_token", null) ?: return
+        val saved = tokenStore.token() ?: return
         authenticate { client -> saved to client.me("Bearer $saved") }
     }
 
@@ -90,10 +97,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 val (token, user) = load(api)
                 userState = user.toUserState()
                 accessToken = token
-                prefs.edit().putString("access_token", token).apply()
                 refreshEquipment()
+            } catch (e: LoginException) {
+                loginError = e.message
             } catch (e: HttpException) {
-                if (e.code() == 401) prefs.edit().remove("access_token").apply()
+                if (e.code() == 401) tokenStore.clear()
                 loginError = message(e)
             } catch (e: IOException) {
                 loginError = message(e)
@@ -111,6 +119,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         cardJob?.cancel()
         historyJob?.cancel()
         accessToken = null
+        tokenStore.clear()
         prefs.edit().remove("access_token").apply()
         userState = UserState()
         equipment = emptyList()
@@ -215,6 +224,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun consumeEvent() { event = null }
 
     private fun AccountDto.toUserState() = UserState(
+        login = login,
         employeeId = id, employeeName = fullName, workshopId = workshopId ?: 0,
         workshop = if (workshopId == null) "Все цеха" else "Цех №$workshopId",
         role = when (role) {
@@ -246,5 +256,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         else -> "Нет связи с сервером. Проверьте адрес, Wi-Fi и запуск бэкенда."
     }
 
-    init { restoreSession() }
+    init {
+        // Старый открытый токен больше не используется; после обновления нужен вход.
+        prefs.edit().remove("access_token").apply()
+        restoreSession()
+    }
 }
