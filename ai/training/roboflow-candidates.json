@@ -1,0 +1,208 @@
+{
+  "checked_on": "2026-11-13",
+  "purpose": "User-supplied candidate inventory; no unrelated dataset was silently used to train a pump-seal model.",
+  "official_export_docs": "https://docs.roboflow.com/datasets/versions/dataset-versions/exporting-data.md",
+  "next_step": "Provide an authorized YOLO export ZIP with labels and source license; do not share a private API key in chat. Review real pump-seal examples and independent physical pump groups before training.",
+  "entries": [
+    {
+      "source_url": "https://universe.roboflow.com/tryout/oil-leak",
+      "project_images": 68,
+      "task": "object_detection",
+      "classes": [
+        "oil"
+      ],
+      "dataset_license": "MIT",
+      "published_model_count": 0,
+      "dataset_version_count": 4,
+      "pump_relevance": "Closest preview: industrial pump/drive/tank installation with liquid pooled on floor; pump-seal labels not verified.",
+      "status": "CANDIDATE_FOR_REVIEW_ONLY",
+      "public_pt_download_verified": false,
+      "downloaded_training_data": false,
+      "export_check_without_key": {
+        "http_status": 401,
+        "result": "API key required; no authorization bypass"
+      }
+    },
+    {
+      "source_url": "https://universe.roboflow.com/s-workspace-fz2uo/leak-4pyvb",
+      "project_images": 593,
+      "task": "object_detection",
+      "classes": [
+        "leak"
+      ],
+      "dataset_license": "CC BY 4.0",
+      "published_model_count": 1,
+      "dataset_version_count": 0,
+      "pump_relevance": "Preview shows a mechanical/engine-like assembly with dark liquid/contamination. Pump seal is not identified; published model is Roboflow Instant, no exported dataset version listed.",
+      "status": "PUMP_SEAL_RELEVANCE_UNCONFIRMED",
+      "public_pt_download_verified": false,
+      "downloaded_training_data": false,
+      "export_check_without_key": {
+        "http_status": 401,
+        "result": "API key required; no authorization bypass"
+      }
+    },
+    {
+      "source_url": "https://universe.roboflow.com/leak-adhw8/leak-pzu8f",
+      "project_images": 3041,
+      "task": "object_detection",
+      "classes": [
+        "0"
+      ],
+      "dataset_license": "CC BY 4.0",
+      "published_model_count": 1,
+      "dataset_version_count": 1,
+      "pump_relevance": "Preview shows visible water jet from a pipe held by hand; this is not the seal of a pump. Class is named 0, requiring semantic review.",
+      "status": "PIPE_LEAK_NOT_PUMP_SEAL",
+      "public_pt_download_verified": false,
+      "downloaded_training_data": false,
+      "export_check_without_key": {
+        "http_status": 401,
+        "result": "API key required; no authorization bypass"
+      }
+    },
+    {
+      "source_url": "https://universe.roboflow.com/roboflow-100/cable-damage",
+      "project_images": 1318,
+      "task": "object_detection",
+      "classes": [
+        "break",
+        "thunderbolt"
+      ],
+      "dataset_license": "CC BY 4.0",
+      "published_model_count": 1,
+      "dataset_version_count": 2,
+      "pump_relevance": "Preview shows a metallic multi-strand rope/conductor, not a motor cable insulation or electrical-contact heating diagnosis. Confirm material and class semantics before use.",
+      "status": "DIFFERENT_DOMAIN_REVIEW_REQUIRED",
+      "public_pt_download_verified": false,
+      "downloaded_training_data": false,
+      "export_check_without_key": {
+        "result": "Not directly tested; official export documentation uses authenticated requests"
+      }
+    },
+    {
+      "source_url": "https://universe.roboflow.com/sample-wy2mp/conveyor-belt-damage",
+      "project_images": 922,
+      "task": "instance_segmentation",
+      "classes": [
+        "Hole",
+        "Human",
+        "Conveyor",
+        "impact damage",
+        "Other Objects",
+        "patch work",
+        "Puncture",
+        "Roller",
+        "Tear"
+      ],
+      "dataset_license": "CC BY 4.0",
+      "published_model_count": 1,
+      "dataset_version_count": 1,
+      "pump_relevance": "Conveyor belt surface damage, not pump components; segmentation output requires a separate decoder/model contract.",
+      "status": "NOT_PUMP_SCOPE",
+      "public_pt_download_verified": false,
+      "downloaded_training_data": false,
+      "export_check_without_key": {
+        "result": "Not directly tested; official export documentation uses authenticated requests"
+      }
+    },
+    {
+      "source_url": "https://universe.roboflow.com/gas-leak/pipeline-leak-prediction",
+      "project_images": 2249,
+      "task": "object_detection",
+      "classes": [
+        "leak",
+        "no leak"
+      ],
+      "dataset_license": "CC BY 4.0",
+      "published_model_count": 3,
+      "dataset_version_count": 12,
+      "pump_relevance": "Pipeline context; version 12 has 6033 augmented examples vs 2249 project images. No pump-seal target verification.",
+      "status": "PIPELINE_NOT_VERIFIED_PUMP_SEAL",
+      "public_pt_download_verified": false,
+      "downloaded_training_data": false,
+      "export_check_without_key": {
+        "result": "Not directly tested; official export documentation uses authenticated requests"
+      }
+    },
+    {
+      "source_url": "https://universe.roboflow.com/insulator-adspq/broken-insulator",
+      "project_images": 1028,
+      "task": "object_detection",
+      "classes": [
+        "good",
+        "broken",
+        "dirty"
+      ],
+      "dataset_license": "CC BY 4.0",
+      "published_model_count": 2,
+      "dataset_version_count": 3,
+      "pump_relevance": "Insulator object/condition dataset; not motor winding insulation or contact temperature measurement.",
+      "status": "NOT_PUMP_SCOPE",
+      "public_pt_download_verified": false,
+      "downloaded_training_data": false,
+      "export_check_without_key": {
+        "result": "Not directly tested; official export documentation uses authenticated requests"
+      }
+    },
+    {
+      "source_url": "https://universe.roboflow.com/shashank-qwzub/heat-exchanger-detection",
+      "project_images": null,
+      "task": null,
+      "classes": null,
+      "dataset_license": null,
+      "published_model_count": null,
+      "dataset_version_count": null,
+      "pump_relevance": "Page returned HTTP 403 Cloudflare challenge; classes, counts and license are unverified. Access controls were not bypassed.",
+      "status": "UNVERIFIED_ACCESS_BLOCKED",
+      "public_pt_download_verified": false,
+      "downloaded_training_data": false,
+      "export_check_without_key": {
+        "result": "Not directly tested; official export documentation uses authenticated requests"
+      }
+    },
+    {
+      "source_url": "https://universe.roboflow.com/jeevan-sendur-g-workspace/ball-bearing",
+      "project_images": 89,
+      "task": "object_detection",
+      "classes": [
+        "bearing"
+      ],
+      "dataset_license": "CC BY 4.0",
+      "published_model_count": 0,
+      "dataset_version_count": 1,
+      "pump_relevance": "Standalone visible bearing detector only; no fault/healthy classes. Does not show a bearing hidden inside pump housing.",
+      "status": "NODE_DETECTION_ONLY_NOT_FAULT_DIAGNOSIS",
+      "public_pt_download_verified": false,
+      "downloaded_training_data": false,
+      "export_check_without_key": {
+        "result": "Not directly tested; official export documentation uses authenticated requests"
+      }
+    },
+    {
+      "source_url": "https://universe.roboflow.com/soumya-8ps2t/detection-of-damages-in-electric-poles",
+      "project_images": 29,
+      "task": "object_detection",
+      "classes": [
+        "Arcing marks on tower",
+        "Broken Insulator",
+        "Broken Wires",
+        "Damaged Cable insulation",
+        "Damaged insulator",
+        "Rust Insulator",
+        "Rust Joint",
+        "Rust steel sheet"
+      ],
+      "dataset_license": "CC BY 4.0",
+      "published_model_count": 0,
+      "dataset_version_count": 1,
+      "pump_relevance": "Electric-pole domain with only 29 project images across eight classes; not a validated pump defect dataset.",
+      "status": "NOT_PUMP_SCOPE",
+      "public_pt_download_verified": false,
+      "downloaded_training_data": false,
+      "export_check_without_key": {
+        "result": "Not directly tested; official export documentation uses authenticated requests"
+      }
+    }
+  ]
+}

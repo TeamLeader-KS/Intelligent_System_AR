@@ -1,0 +1,1529 @@
+{
+  "publisher_origin": "ORGANIZER_DOCUMENT",
+  "method": "pdftoppm 200 DPI; Tesseract rus+eng --psm 3",
+  "warning": "OCR text is a search aid. Every numeric fact needs visual comparison against the cited original PDF page.",
+  "confidence_definition": "Unweighted mean of nonnegative Tesseract word confidences, 0–100; not factual accuracy.",
+  "entries": [
+    {
+      "source_file": "raw/Документация/Паспорта Насосов/1) Насос №3 ПС.pdf",
+      "source_sha256": "a889bebd47e44d7fde5473e81fa771e9f2c25870436704d5010ecdacbd9abe21",
+      "text_file": "Документация/Паспорта Насосов/1) Насос №3 ПС.pdf.txt",
+      "publisher_origin": "ORGANIZER_DOCUMENT",
+      "pages": 7,
+      "page_indexing": "1-based",
+      "dpi": 200,
+      "needs_manual_review": true,
+      "completed_at": "2026-11-13T16:20:59.524288+00:00",
+      "page_results": [
+        {
+          "page": 1,
+          "word_count": 30,
+          "mean_word_confidence": 62.13,
+          "needs_manual_review": true
+        },
+        {
+          "page": 2,
+          "word_count": 201,
+          "mean_word_confidence": 78.45,
+          "needs_manual_review": true
+        },
+        {
+          "page": 3,
+          "word_count": 198,
+          "mean_word_confidence": 81.11,
+          "needs_manual_review": true
+        },
+        {
+          "page": 4,
+          "word_count": 193,
+          "mean_word_confidence": 77.38,
+          "needs_manual_review": true
+        },
+        {
+          "page": 5,
+          "word_count": 230,
+          "mean_word_confidence": 90.56,
+          "needs_manual_review": true
+        },
+        {
+          "page": 6,
+          "word_count": 371,
+          "mean_word_confidence": 47.8,
+          "needs_manual_review": true
+        },
+        {
+          "page": 7,
+          "word_count": 89,
+          "mean_word_confidence": 80.1,
+          "needs_manual_review": true
+        }
+      ]
+    },
+    {
+      "source_file": "raw/Документация/Паспорта Насосов/1) Насос №2 ПС.pdf",
+      "source_sha256": "e85d57ec02ba1f5a9c60ea4df2ab7697c8cbfcd0f0cd1919856eb4acb59183ae",
+      "text_file": "Документация/Паспорта Насосов/1) Насос №2 ПС.pdf.txt",
+      "publisher_origin": "ORGANIZER_DOCUMENT",
+      "pages": 7,
+      "page_indexing": "1-based",
+      "dpi": 200,
+      "needs_manual_review": true,
+      "completed_at": "2026-11-13T16:21:00.595272+00:00",
+      "page_results": [
+        {
+          "page": 1,
+          "word_count": 40,
+          "mean_word_confidence": 93.78,
+          "needs_manual_review": true
+        },
+        {
+          "page": 2,
+          "word_count": 406,
+          "mean_word_confidence": 90.84,
+          "needs_manual_review": true
+        },
+        {
+          "page": 3,
+          "word_count": 228,
+          "mean_word_confidence": 89.85,
+          "needs_manual_review": true
+        },
+        {
+          "page": 4,
+          "word_count": 230,
+          "mean_word_confidence": 89.59,
+          "needs_manual_review": true
+        },
+        {
+          "page": 5,
+          "word_count": 230,
+          "mean_word_confidence": 89.62,
+          "needs_manual_review": true
+        },
+        {
+          "page": 6,
+          "word_count": 378,
+          "mean_word_confidence": 48.26,
+          "needs_manual_review": true
+        },
+        {
+          "page": 7,
+          "word_count": 106,
+          "mean_word_confidence": 74.6,
+          "needs_manual_review": true
+        }
+      ]
+    },
+    {
+      "source_file": "raw/Документация/Паспорта Насосов/1) Насос №1 ПС.pdf",
+      "source_sha256": "52b71533cbe41cca80bf72d1baac37b73ccd7f5dee773e6adb1387bb087564f0",
+      "text_file": "Документация/Паспорта Насосов/1) Насос №1 ПС.pdf.txt",
+      "publisher_origin": "ORGANIZER_DOCUMENT",
+      "pages": 7,
+      "page_indexing": "1-based",
+      "dpi": 200,
+      "needs_manual_review": true,
+      "completed_at": "2026-11-13T16:21:00.761634+00:00",
+      "page_results": [
+        {
+          "page": 1,
+          "word_count": 40,
+          "mean_word_confidence": 93.02,
+          "needs_manual_review": true
+        },
+        {
+          "page": 2,
+          "word_count": 405,
+          "mean_word_confidence": 91.35,
+          "needs_manual_review": true
+        },
+        {
+          "page": 3,
+          "word_count": 229,
+          "mean_word_confidence": 89.36,
+          "needs_manual_review": true
+        },
+        {
+          "page": 4,
+          "word_count": 229,
+          "mean_word_confidence": 90.43,
+          "needs_manual_review": true
+        },
+        {
+          "page": 5,
+          "word_count": 228,
+          "mean_word_confidence": 90.05,
+          "needs_manual_review": true
+        },
+        {
+          "page": 6,
+          "word_count": 273,
+          "mean_word_confidence": 50.3,
+          "needs_manual_review": true
+        },
+        {
+          "page": 7,
+          "word_count": 109,
+          "mean_word_confidence": 69.94,
+          "needs_manual_review": true
+        }
+      ]
+    },
+    {
+      "source_file": "raw/Документация/Паспорта Насосов/1) Насос №4 ПС.pdf",
+      "source_sha256": "40dff57cd0097f80f73cf8b4180e3458d25574219a0540660a4cd2ffe685c902",
+      "text_file": "Документация/Паспорта Насосов/1) Насос №4 ПС.pdf.txt",
+      "publisher_origin": "ORGANIZER_DOCUMENT",
+      "pages": 7,
+      "page_indexing": "1-based",
+      "dpi": 200,
+      "needs_manual_review": true,
+      "completed_at": "2026-11-13T16:21:01.023110+00:00",
+      "page_results": [
+        {
+          "page": 1,
+          "word_count": 40,
+          "mean_word_confidence": 93.03,
+          "needs_manual_review": true
+        },
+        {
+          "page": 2,
+          "word_count": 228,
+          "mean_word_confidence": 89.27,
+          "needs_manual_review": true
+        },
+        {
+          "page": 3,
+          "word_count": 230,
+          "mean_word_confidence": 90.62,
+          "needs_manual_review": true
+        },
+        {
+          "page": 4,
+          "word_count": 409,
+          "mean_word_confidence": 91.87,
+          "needs_manual_review": true
+        },
+        {
+          "page": 5,
+          "word_count": 233,
+          "mean_word_confidence": 89.72,
+          "needs_manual_review": true
+        },
+        {
+          "page": 6,
+          "word_count": 142,
+          "mean_word_confidence": 35.84,
+          "needs_manual_review": true
+        },
+        {
+          "page": 7,
+          "word_count": 109,
+          "mean_word_confidence": 68.19,
+          "needs_manual_review": true
+        }
+      ]
+    },
+    {
+      "source_file": "raw/Документация/Паспорта Насосов/2) Редукт, ЭД, ТПП №3 ПС.pdf",
+      "source_sha256": "fc7651168288b4b3606a2ae22ce2b678ab3e9f7a93636afd94cd9f9325aaa75a",
+      "text_file": "Документация/Паспорта Насосов/2) Редукт, ЭД, ТПП №3 ПС.pdf.txt",
+      "publisher_origin": "ORGANIZER_DOCUMENT",
+      "pages": 8,
+      "page_indexing": "1-based",
+      "dpi": 200,
+      "needs_manual_review": true,
+      "completed_at": "2026-11-13T16:21:21.458136+00:00",
+      "page_results": [
+        {
+          "page": 1,
+          "word_count": 314,
+          "mean_word_confidence": 91.81,
+          "needs_manual_review": true
+        },
+        {
+          "page": 2,
+          "word_count": 95,
+          "mean_word_confidence": 94.94,
+          "needs_manual_review": true
+        },
+        {
+          "page": 3,
+          "word_count": 285,
+          "mean_word_confidence": 89.21,
+          "needs_manual_review": true
+        },
+        {
+          "page": 4,
+          "word_count": 284,
+          "mean_word_confidence": 88.38,
+          "needs_manual_review": true
+        },
+        {
+          "page": 5,
+          "word_count": 637,
+          "mean_word_confidence": 89.27,
+          "needs_manual_review": true
+        },
+        {
+          "page": 6,
+          "word_count": 354,
+          "mean_word_confidence": 93.4,
+          "needs_manual_review": true
+        },
+        {
+          "page": 7,
+          "word_count": 215,
+          "mean_word_confidence": 74.58,
+          "needs_manual_review": true
+        },
+        {
+          "page": 8,
+          "word_count": 168,
+          "mean_word_confidence": 86.06,
+          "needs_manual_review": true
+        }
+      ]
+    },
+    {
+      "source_file": "raw/Документация/Паспорта Насосов/2) Редукт, ЭД, ТПП №2 ПС.pdf",
+      "source_sha256": "92f4a87dbbdc59df6a15ae36ef0e0da32ab0060769cad2779b56e4a9ff3f6979",
+      "text_file": "Документация/Паспорта Насосов/2) Редукт, ЭД, ТПП №2 ПС.pdf.txt",
+      "publisher_origin": "ORGANIZER_DOCUMENT",
+      "pages": 8,
+      "page_indexing": "1-based",
+      "dpi": 200,
+      "needs_manual_review": true,
+      "completed_at": "2026-11-13T16:21:24.973911+00:00",
+      "page_results": [
+        {
+          "page": 1,
+          "word_count": 286,
+          "mean_word_confidence": 88.84,
+          "needs_manual_review": true
+        },
+        {
+          "page": 2,
+          "word_count": 283,
+          "mean_word_confidence": 89.99,
+          "needs_manual_review": true
+        },
+        {
+          "page": 3,
+          "word_count": 37,
+          "mean_word_confidence": 35.69,
+          "needs_manual_review": true
+        },
+        {
+          "page": 4,
+          "word_count": 94,
+          "mean_word_confidence": 94.87,
+          "needs_manual_review": true
+        },
+        {
+          "page": 5,
+          "word_count": 348,
+          "mean_word_confidence": 93.29,
+          "needs_manual_review": true
+        },
+        {
+          "page": 6,
+          "word_count": 322,
+          "mean_word_confidence": 90.39,
+          "needs_manual_review": true
+        },
+        {
+          "page": 7,
+          "word_count": 319,
+          "mean_word_confidence": 63.63,
+          "needs_manual_review": true
+        },
+        {
+          "page": 8,
+          "word_count": 191,
+          "mean_word_confidence": 82.37,
+          "needs_manual_review": true
+        }
+      ]
+    },
+    {
+      "source_file": "raw/Документация/Паспорта Насосов/2) Редукт, ЭД, ТПП №4 ПС.pdf",
+      "source_sha256": "671882320ac5108469a018eceb1ed8f1516de36082c4bf26992abe189649d593",
+      "text_file": "Документация/Паспорта Насосов/2) Редукт, ЭД, ТПП №4 ПС.pdf.txt",
+      "publisher_origin": "ORGANIZER_DOCUMENT",
+      "pages": 8,
+      "page_indexing": "1-based",
+      "dpi": 200,
+      "needs_manual_review": true,
+      "completed_at": "2026-11-13T16:21:26.607777+00:00",
+      "page_results": [
+        {
+          "page": 1,
+          "word_count": 281,
+          "mean_word_confidence": 89.95,
+          "needs_manual_review": true
+        },
+        {
+          "page": 2,
+          "word_count": 281,
+          "mean_word_confidence": 90.46,
+          "needs_manual_review": true
+        },
+        {
+          "page": 3,
+          "word_count": 348,
+          "mean_word_confidence": 33.66,
+          "needs_manual_review": true
+        },
+        {
+          "page": 4,
+          "word_count": 95,
+          "mean_word_confidence": 95.2,
+          "needs_manual_review": true
+        },
+        {
+          "page": 5,
+          "word_count": 352,
+          "mean_word_confidence": 93.22,
+          "needs_manual_review": true
+        },
+        {
+          "page": 6,
+          "word_count": 674,
+          "mean_word_confidence": 88.14,
+          "needs_manual_review": true
+        },
+        {
+          "page": 7,
+          "word_count": 38,
+          "mean_word_confidence": 41.16,
+          "needs_manual_review": true
+        },
+        {
+          "page": 8,
+          "word_count": 165,
+          "mean_word_confidence": 37.97,
+          "needs_manual_review": true
+        }
+      ]
+    },
+    {
+      "source_file": "raw/Документация/Паспорта Насосов/2) Редукт, ЭД, ТПП №1 ПС.pdf",
+      "source_sha256": "51933d938a3b4e28eeafce88eb665ca21aa9e5a27483ca873b17c14ac74acd41",
+      "text_file": "Документация/Паспорта Насосов/2) Редукт, ЭД, ТПП №1 ПС.pdf.txt",
+      "publisher_origin": "ORGANIZER_DOCUMENT",
+      "pages": 8,
+      "page_indexing": "1-based",
+      "dpi": 200,
+      "needs_manual_review": true,
+      "completed_at": "2026-11-13T16:21:29.227024+00:00",
+      "page_results": [
+        {
+          "page": 1,
+          "word_count": 84,
+          "mean_word_confidence": 40.07,
+          "needs_manual_review": true
+        },
+        {
+          "page": 2,
+          "word_count": 298,
+          "mean_word_confidence": 39.71,
+          "needs_manual_review": true
+        },
+        {
+          "page": 3,
+          "word_count": 349,
+          "mean_word_confidence": 35.92,
+          "needs_manual_review": true
+        },
+        {
+          "page": 4,
+          "word_count": 95,
+          "mean_word_confidence": 93.81,
+          "needs_manual_review": true
+        },
+        {
+          "page": 5,
+          "word_count": 286,
+          "mean_word_confidence": 45.61,
+          "needs_manual_review": true
+        },
+        {
+          "page": 6,
+          "word_count": 461,
+          "mean_word_confidence": 46.21,
+          "needs_manual_review": true
+        },
+        {
+          "page": 7,
+          "word_count": 154,
+          "mean_word_confidence": 40.47,
+          "needs_manual_review": true
+        },
+        {
+          "page": 8,
+          "word_count": 245,
+          "mean_word_confidence": 41.84,
+          "needs_manual_review": true
+        }
+      ]
+    },
+    {
+      "source_file": "raw/Документация/Паспорта Насосов/ОЛ 0201.pdf",
+      "source_sha256": "5281c9696df905eee381c37586e61b3680beefd09299cc55e90b091b673b4dfe",
+      "text_file": "Документация/Паспорта Насосов/ОЛ 0201.pdf.txt",
+      "publisher_origin": "ORGANIZER_DOCUMENT",
+      "pages": 4,
+      "page_indexing": "1-based",
+      "dpi": 200,
+      "needs_manual_review": true,
+      "completed_at": "2026-11-13T16:21:37.957415+00:00",
+      "page_results": [
+        {
+          "page": 1,
+          "word_count": 98,
+          "mean_word_confidence": 71.13,
+          "needs_manual_review": true
+        },
+        {
+          "page": 2,
+          "word_count": 250,
+          "mean_word_confidence": 90.22,
+          "needs_manual_review": true
+        },
+        {
+          "page": 3,
+          "word_count": 263,
+          "mean_word_confidence": 89.6,
+          "needs_manual_review": true
+        },
+        {
+          "page": 4,
+          "word_count": 154,
+          "mean_word_confidence": 90.86,
+          "needs_manual_review": true
+        }
+      ]
+    },
+    {
+      "source_file": "raw/Документация/Паспорта Насосов/ОЛ 0601.pdf",
+      "source_sha256": "5106c481d3f5a6d52d3cffe83b942c5461db584bc46dbf1acc4cbdf1debd83ed",
+      "text_file": "Документация/Паспорта Насосов/ОЛ 0601.pdf.txt",
+      "publisher_origin": "ORGANIZER_DOCUMENT",
+      "pages": 4,
+      "page_indexing": "1-based",
+      "dpi": 200,
+      "needs_manual_review": true,
+      "completed_at": "2026-11-13T16:21:46.534602+00:00",
+      "page_results": [
+        {
+          "page": 1,
+          "word_count": 93,
+          "mean_word_confidence": 72.72,
+          "needs_manual_review": true
+        },
+        {
+          "page": 2,
+          "word_count": 244,
+          "mean_word_confidence": 90.47,
+          "needs_manual_review": true
+        },
+        {
+          "page": 3,
+          "word_count": 243,
+          "mean_word_confidence": 91.48,
+          "needs_manual_review": true
+        },
+        {
+          "page": 4,
+          "word_count": 151,
+          "mean_word_confidence": 89.61,
+          "needs_manual_review": true
+        }
+      ]
+    },
+    {
+      "source_file": "raw/Документация/Паспорта Насосов/Перечень док-ов.pdf",
+      "source_sha256": "70031d5404b047ad384cbf43b006423dd4803078a6295b9a9d966b536d76857c",
+      "text_file": "Документация/Паспорта Насосов/Перечень док-ов.pdf.txt",
+      "publisher_origin": "ORGANIZER_DOCUMENT",
+      "pages": 1,
+      "page_indexing": "1-based",
+      "dpi": 200,
+      "needs_manual_review": true,
+      "completed_at": "2026-11-13T16:21:49.969726+00:00",
+      "page_results": [
+        {
+          "page": 1,
+          "word_count": 313,
+          "mean_word_confidence": 89.09,
+          "needs_manual_review": true
+        }
+      ]
+    },
+    {
+      "source_file": "raw/Документация/Паспорта Насосов/Перечень смазочных мат-ов.pdf",
+      "source_sha256": "f07eaf35add6f7e7de21b2fad853294a56208edd5744bdf5c772ca5fa2ef2f56",
+      "text_file": "Документация/Паспорта Насосов/Перечень смазочных мат-ов.pdf.txt",
+      "publisher_origin": "ORGANIZER_DOCUMENT",
+      "pages": 1,
+      "page_indexing": "1-based",
+      "dpi": 200,
+      "needs_manual_review": true,
+      "completed_at": "2026-11-13T16:21:51.549825+00:00",
+      "page_results": [
+        {
+          "page": 1,
+          "word_count": 67,
+          "mean_word_confidence": 79.71,
+          "needs_manual_review": true
+        }
+      ]
+    },
+    {
+      "source_file": "raw/Документация/Паспорта Насосов/Декл серт..pdf",
+      "source_sha256": "7d7bc1197f36f8a8842f54eeb391eff05f73c3980094b83762564345e3b7691f",
+      "text_file": "Документация/Паспорта Насосов/Декл серт..pdf.txt",
+      "publisher_origin": "ORGANIZER_DOCUMENT",
+      "pages": 12,
+      "page_indexing": "1-based",
+      "dpi": 200,
+      "needs_manual_review": true,
+      "completed_at": "2026-11-13T16:21:54.990353+00:00",
+      "page_results": [
+        {
+          "page": 1,
+          "word_count": 218,
+          "mean_word_confidence": 89.59,
+          "needs_manual_review": true
+        },
+        {
+          "page": 2,
+          "word_count": 211,
+          "mean_word_confidence": 92.92,
+          "needs_manual_review": true
+        },
+        {
+          "page": 3,
+          "word_count": 348,
+          "mean_word_confidence": 78.13,
+          "needs_manual_review": true
+        },
+        {
+          "page": 4,
+          "word_count": 599,
+          "mean_word_confidence": 83.13,
+          "needs_manual_review": true
+        },
+        {
+          "page": 5,
+          "word_count": 365,
+          "mean_word_confidence": 74.39,
+          "needs_manual_review": true
+        },
+        {
+          "page": 6,
+          "word_count": 0,
+          "mean_word_confidence": null,
+          "needs_manual_review": true
+        },
+        {
+          "page": 7,
+          "word_count": 141,
+          "mean_word_confidence": 83.74,
+          "needs_manual_review": true
+        },
+        {
+          "page": 8,
+          "word_count": 158,
+          "mean_word_confidence": 91.9,
+          "needs_manual_review": true
+        },
+        {
+          "page": 9,
+          "word_count": 209,
+          "mean_word_confidence": 90.16,
+          "needs_manual_review": true
+        },
+        {
+          "page": 10,
+          "word_count": 0,
+          "mean_word_confidence": null,
+          "needs_manual_review": true
+        },
+        {
+          "page": 11,
+          "word_count": 192,
+          "mean_word_confidence": 84.65,
+          "needs_manual_review": true
+        },
+        {
+          "page": 12,
+          "word_count": 0,
+          "mean_word_confidence": null,
+          "needs_manual_review": true
+        }
+      ]
+    },
+    {
+      "source_file": "raw/Документация/Паспорта Насосов/Инструкция по ЭиО.pdf",
+      "source_sha256": "849c350c671bee44438b0ca5c81a792a9197b408e10865e5ccf715fade9a0b3d",
+      "text_file": "Документация/Паспорта Насосов/Инструкция по ЭиО.pdf.txt",
+      "publisher_origin": "ORGANIZER_DOCUMENT",
+      "pages": 10,
+      "page_indexing": "1-based",
+      "dpi": 200,
+      "needs_manual_review": true,
+      "completed_at": "2026-11-13T16:22:02.242651+00:00",
+      "page_results": [
+        {
+          "page": 1,
+          "word_count": 48,
+          "mean_word_confidence": 92.01,
+          "needs_manual_review": true
+        },
+        {
+          "page": 2,
+          "word_count": 1,
+          "mean_word_confidence": 72.91,
+          "needs_manual_review": true
+        },
+        {
+          "page": 3,
+          "word_count": 382,
+          "mean_word_confidence": 74.62,
+          "needs_manual_review": true
+        },
+        {
+          "page": 4,
+          "word_count": 336,
+          "mean_word_confidence": 91.86,
+          "needs_manual_review": true
+        },
+        {
+          "page": 5,
+          "word_count": 361,
+          "mean_word_confidence": 93.81,
+          "needs_manual_review": true
+        },
+        {
+          "page": 6,
+          "word_count": 435,
+          "mean_word_confidence": 93.3,
+          "needs_manual_review": true
+        },
+        {
+          "page": 7,
+          "word_count": 454,
+          "mean_word_confidence": 92.74,
+          "needs_manual_review": true
+        },
+        {
+          "page": 8,
+          "word_count": 425,
+          "mean_word_confidence": 91.34,
+          "needs_manual_review": true
+        },
+        {
+          "page": 9,
+          "word_count": 330,
+          "mean_word_confidence": 94.28,
+          "needs_manual_review": true
+        },
+        {
+          "page": 10,
+          "word_count": 275,
+          "mean_word_confidence": 94.88,
+          "needs_manual_review": true
+        }
+      ]
+    },
+    {
+      "source_file": "raw/Документация/Паспорта Насосов/СБ, уст. чертеж и др..pdf",
+      "source_sha256": "97873cfade9866cad8e440b8bfc17e485e84a47a202386919bf6bc5c4d37d2fa",
+      "text_file": "Документация/Паспорта Насосов/СБ, уст. чертеж и др..pdf.txt",
+      "publisher_origin": "ORGANIZER_DOCUMENT",
+      "pages": 8,
+      "page_indexing": "1-based",
+      "dpi": 200,
+      "needs_manual_review": true,
+      "completed_at": "2026-11-13T16:22:23.681324+00:00",
+      "page_results": [
+        {
+          "page": 1,
+          "word_count": 53,
+          "mean_word_confidence": 42.62,
+          "needs_manual_review": true
+        },
+        {
+          "page": 2,
+          "word_count": 484,
+          "mean_word_confidence": 40.35,
+          "needs_manual_review": true
+        },
+        {
+          "page": 3,
+          "word_count": 102,
+          "mean_word_confidence": 52.5,
+          "needs_manual_review": true
+        },
+        {
+          "page": 4,
+          "word_count": 130,
+          "mean_word_confidence": 43.3,
+          "needs_manual_review": true
+        },
+        {
+          "page": 5,
+          "word_count": 52,
+          "mean_word_confidence": 30.98,
+          "needs_manual_review": true
+        },
+        {
+          "page": 6,
+          "word_count": 170,
+          "mean_word_confidence": 44.27,
+          "needs_manual_review": true
+        },
+        {
+          "page": 7,
+          "word_count": 50,
+          "mean_word_confidence": 42.26,
+          "needs_manual_review": true
+        },
+        {
+          "page": 8,
+          "word_count": 203,
+          "mean_word_confidence": 45.62,
+          "needs_manual_review": true
+        }
+      ]
+    },
+    {
+      "source_file": "raw/Документация/Паспорта Насосов/Мотор-редукт. РП.pdf",
+      "source_sha256": "00ba1669e528cf0522a69950c765f81499941615e1a17a1acd4b770682ffab27",
+      "text_file": "Документация/Паспорта Насосов/Мотор-редукт. РП.pdf.txt",
+      "publisher_origin": "ORGANIZER_DOCUMENT",
+      "pages": 34,
+      "page_indexing": "1-based",
+      "dpi": 200,
+      "needs_manual_review": true,
+      "completed_at": "2026-11-13T16:23:01.088943+00:00",
+      "page_results": [
+        {
+          "page": 1,
+          "word_count": 76,
+          "mean_word_confidence": 85.87,
+          "needs_manual_review": true
+        },
+        {
+          "page": 2,
+          "word_count": 193,
+          "mean_word_confidence": 79.99,
+          "needs_manual_review": true
+        },
+        {
+          "page": 3,
+          "word_count": 394,
+          "mean_word_confidence": 85.05,
+          "needs_manual_review": true
+        },
+        {
+          "page": 4,
+          "word_count": 365,
+          "mean_word_confidence": 72.28,
+          "needs_manual_review": true
+        },
+        {
+          "page": 5,
+          "word_count": 220,
+          "mean_word_confidence": 80.11,
+          "needs_manual_review": true
+        },
+        {
+          "page": 6,
+          "word_count": 313,
+          "mean_word_confidence": 87.95,
+          "needs_manual_review": true
+        },
+        {
+          "page": 7,
+          "word_count": 56,
+          "mean_word_confidence": 83.64,
+          "needs_manual_review": true
+        },
+        {
+          "page": 8,
+          "word_count": 165,
+          "mean_word_confidence": 74.92,
+          "needs_manual_review": true
+        },
+        {
+          "page": 9,
+          "word_count": 417,
+          "mean_word_confidence": 88.38,
+          "needs_manual_review": true
+        },
+        {
+          "page": 10,
+          "word_count": 435,
+          "mean_word_confidence": 84.06,
+          "needs_manual_review": true
+        },
+        {
+          "page": 11,
+          "word_count": 164,
+          "mean_word_confidence": 86.97,
+          "needs_manual_review": true
+        },
+        {
+          "page": 12,
+          "word_count": 109,
+          "mean_word_confidence": 90.38,
+          "needs_manual_review": true
+        },
+        {
+          "page": 13,
+          "word_count": 119,
+          "mean_word_confidence": 82.57,
+          "needs_manual_review": true
+        },
+        {
+          "page": 14,
+          "word_count": 177,
+          "mean_word_confidence": 84.98,
+          "needs_manual_review": true
+        },
+        {
+          "page": 15,
+          "word_count": 224,
+          "mean_word_confidence": 90.25,
+          "needs_manual_review": true
+        },
+        {
+          "page": 16,
+          "word_count": 300,
+          "mean_word_confidence": 93.8,
+          "needs_manual_review": true
+        },
+        {
+          "page": 17,
+          "word_count": 55,
+          "mean_word_confidence": 86.03,
+          "needs_manual_review": true
+        },
+        {
+          "page": 18,
+          "word_count": 151,
+          "mean_word_confidence": 81.45,
+          "needs_manual_review": true
+        },
+        {
+          "page": 19,
+          "word_count": 234,
+          "mean_word_confidence": 90.19,
+          "needs_manual_review": true
+        },
+        {
+          "page": 20,
+          "word_count": 162,
+          "mean_word_confidence": 93.24,
+          "needs_manual_review": true
+        },
+        {
+          "page": 21,
+          "word_count": 116,
+          "mean_word_confidence": 92.66,
+          "needs_manual_review": true
+        },
+        {
+          "page": 22,
+          "word_count": 175,
+          "mean_word_confidence": 86.59,
+          "needs_manual_review": true
+        },
+        {
+          "page": 23,
+          "word_count": 122,
+          "mean_word_confidence": 70.81,
+          "needs_manual_review": true
+        },
+        {
+          "page": 24,
+          "word_count": 236,
+          "mean_word_confidence": 83.06,
+          "needs_manual_review": true
+        },
+        {
+          "page": 25,
+          "word_count": 226,
+          "mean_word_confidence": 85.26,
+          "needs_manual_review": true
+        },
+        {
+          "page": 26,
+          "word_count": 235,
+          "mean_word_confidence": 90.5,
+          "needs_manual_review": true
+        },
+        {
+          "page": 27,
+          "word_count": 337,
+          "mean_word_confidence": 93.86,
+          "needs_manual_review": true
+        },
+        {
+          "page": 28,
+          "word_count": 318,
+          "mean_word_confidence": 90.67,
+          "needs_manual_review": true
+        },
+        {
+          "page": 29,
+          "word_count": 299,
+          "mean_word_confidence": 91.96,
+          "needs_manual_review": true
+        },
+        {
+          "page": 30,
+          "word_count": 353,
+          "mean_word_confidence": 84.57,
+          "needs_manual_review": true
+        },
+        {
+          "page": 31,
+          "word_count": 419,
+          "mean_word_confidence": 92.8,
+          "needs_manual_review": true
+        },
+        {
+          "page": 32,
+          "word_count": 349,
+          "mean_word_confidence": 94.37,
+          "needs_manual_review": true
+        },
+        {
+          "page": 33,
+          "word_count": 283,
+          "mean_word_confidence": 91.5,
+          "needs_manual_review": true
+        },
+        {
+          "page": 34,
+          "word_count": 414,
+          "mean_word_confidence": 90.41,
+          "needs_manual_review": true
+        }
+      ]
+    },
+    {
+      "source_file": "raw/Документация/Паспорта Насосов/Серты ЭД.pdf",
+      "source_sha256": "5ac8a6922547bb1aeaf15aec6c747c89446c48a4cdecd79fe45c18f64aff3bda",
+      "text_file": "Документация/Паспорта Насосов/Серты ЭД.pdf.txt",
+      "publisher_origin": "ORGANIZER_DOCUMENT",
+      "pages": 6,
+      "page_indexing": "1-based",
+      "dpi": 200,
+      "needs_manual_review": true,
+      "completed_at": "2026-11-13T16:23:21.238131+00:00",
+      "page_results": [
+        {
+          "page": 1,
+          "word_count": 394,
+          "mean_word_confidence": 79.53,
+          "needs_manual_review": true
+        },
+        {
+          "page": 2,
+          "word_count": 531,
+          "mean_word_confidence": 79.67,
+          "needs_manual_review": true
+        },
+        {
+          "page": 3,
+          "word_count": 560,
+          "mean_word_confidence": 78.03,
+          "needs_manual_review": true
+        },
+        {
+          "page": 4,
+          "word_count": 0,
+          "mean_word_confidence": null,
+          "needs_manual_review": true
+        },
+        {
+          "page": 5,
+          "word_count": 299,
+          "mean_word_confidence": 88.86,
+          "needs_manual_review": true
+        },
+        {
+          "page": 6,
+          "word_count": 0,
+          "mean_word_confidence": null,
+          "needs_manual_review": true
+        }
+      ]
+    },
+    {
+      "source_file": "raw/Документация/Паспорта Насосов/Свид СИ, СС Элемер.pdf",
+      "source_sha256": "0fc19e5ef76cf6f37bcc3fef0f109d2b3d4d076abfa308cef27d212a0a24af7c",
+      "text_file": "Документация/Паспорта Насосов/Свид СИ, СС Элемер.pdf.txt",
+      "publisher_origin": "ORGANIZER_DOCUMENT",
+      "pages": 24,
+      "page_indexing": "1-based",
+      "dpi": 200,
+      "needs_manual_review": true,
+      "completed_at": "2026-11-13T16:23:29.063959+00:00",
+      "page_results": [
+        {
+          "page": 1,
+          "word_count": 111,
+          "mean_word_confidence": 85.94,
+          "needs_manual_review": true
+        },
+        {
+          "page": 2,
+          "word_count": 417,
+          "mean_word_confidence": 91.3,
+          "needs_manual_review": true
+        },
+        {
+          "page": 3,
+          "word_count": 88,
+          "mean_word_confidence": 82.48,
+          "needs_manual_review": true
+        },
+        {
+          "page": 4,
+          "word_count": 24,
+          "mean_word_confidence": 66.93,
+          "needs_manual_review": true
+        },
+        {
+          "page": 5,
+          "word_count": 323,
+          "mean_word_confidence": 89.16,
+          "needs_manual_review": true
+        },
+        {
+          "page": 6,
+          "word_count": 87,
+          "mean_word_confidence": 36.55,
+          "needs_manual_review": true
+        },
+        {
+          "page": 7,
+          "word_count": 321,
+          "mean_word_confidence": 88.19,
+          "needs_manual_review": true
+        },
+        {
+          "page": 8,
+          "word_count": 286,
+          "mean_word_confidence": 86.19,
+          "needs_manual_review": true
+        },
+        {
+          "page": 9,
+          "word_count": 197,
+          "mean_word_confidence": 87.83,
+          "needs_manual_review": true
+        },
+        {
+          "page": 10,
+          "word_count": 1,
+          "mean_word_confidence": 54.3,
+          "needs_manual_review": true
+        },
+        {
+          "page": 11,
+          "word_count": 361,
+          "mean_word_confidence": 73.85,
+          "needs_manual_review": true
+        },
+        {
+          "page": 12,
+          "word_count": 668,
+          "mean_word_confidence": 81.74,
+          "needs_manual_review": true
+        },
+        {
+          "page": 13,
+          "word_count": 145,
+          "mean_word_confidence": 80.91,
+          "needs_manual_review": true
+        },
+        {
+          "page": 14,
+          "word_count": 134,
+          "mean_word_confidence": 71.93,
+          "needs_manual_review": true
+        },
+        {
+          "page": 15,
+          "word_count": 144,
+          "mean_word_confidence": 85.65,
+          "needs_manual_review": true
+        },
+        {
+          "page": 16,
+          "word_count": 279,
+          "mean_word_confidence": 89.55,
+          "needs_manual_review": true
+        },
+        {
+          "page": 17,
+          "word_count": 259,
+          "mean_word_confidence": 89.36,
+          "needs_manual_review": true
+        },
+        {
+          "page": 18,
+          "word_count": 0,
+          "mean_word_confidence": null,
+          "needs_manual_review": true
+        },
+        {
+          "page": 19,
+          "word_count": 58,
+          "mean_word_confidence": 76.82,
+          "needs_manual_review": true
+        },
+        {
+          "page": 20,
+          "word_count": 0,
+          "mean_word_confidence": null,
+          "needs_manual_review": true
+        },
+        {
+          "page": 21,
+          "word_count": 187,
+          "mean_word_confidence": 74.16,
+          "needs_manual_review": true
+        },
+        {
+          "page": 22,
+          "word_count": 0,
+          "mean_word_confidence": null,
+          "needs_manual_review": true
+        },
+        {
+          "page": 23,
+          "word_count": 202,
+          "mean_word_confidence": 83.21,
+          "needs_manual_review": true
+        },
+        {
+          "page": 24,
+          "word_count": 0,
+          "mean_word_confidence": null,
+          "needs_manual_review": true
+        }
+      ]
+    },
+    {
+      "source_file": "raw/Документация/Паспорта Насосов/Присоед. арматура Горэлтех.pdf",
+      "source_sha256": "521393c3b0b0ce489518f845946045f177343b5140aece2b962355bfef069be1",
+      "text_file": "Документация/Паспорта Насосов/Присоед. арматура Горэлтех.pdf.txt",
+      "publisher_origin": "ORGANIZER_DOCUMENT",
+      "pages": 18,
+      "page_indexing": "1-based",
+      "dpi": 200,
+      "needs_manual_review": true,
+      "completed_at": "2026-11-13T16:23:29.172697+00:00",
+      "page_results": [
+        {
+          "page": 1,
+          "word_count": 117,
+          "mean_word_confidence": 41.98,
+          "needs_manual_review": true
+        },
+        {
+          "page": 2,
+          "word_count": 254,
+          "mean_word_confidence": 78.57,
+          "needs_manual_review": true
+        },
+        {
+          "page": 3,
+          "word_count": 498,
+          "mean_word_confidence": 42.39,
+          "needs_manual_review": true
+        },
+        {
+          "page": 4,
+          "word_count": 520,
+          "mean_word_confidence": 92.62,
+          "needs_manual_review": true
+        },
+        {
+          "page": 5,
+          "word_count": 49,
+          "mean_word_confidence": 45.57,
+          "needs_manual_review": true
+        },
+        {
+          "page": 6,
+          "word_count": 808,
+          "mean_word_confidence": 95.15,
+          "needs_manual_review": true
+        },
+        {
+          "page": 7,
+          "word_count": 471,
+          "mean_word_confidence": 40.3,
+          "needs_manual_review": true
+        },
+        {
+          "page": 8,
+          "word_count": 826,
+          "mean_word_confidence": 94.53,
+          "needs_manual_review": true
+        },
+        {
+          "page": 9,
+          "word_count": 468,
+          "mean_word_confidence": 85.2,
+          "needs_manual_review": true
+        },
+        {
+          "page": 10,
+          "word_count": 268,
+          "mean_word_confidence": 82.03,
+          "needs_manual_review": true
+        },
+        {
+          "page": 11,
+          "word_count": 672,
+          "mean_word_confidence": 86.54,
+          "needs_manual_review": true
+        },
+        {
+          "page": 12,
+          "word_count": 415,
+          "mean_word_confidence": 76.22,
+          "needs_manual_review": true
+        },
+        {
+          "page": 13,
+          "word_count": 596,
+          "mean_word_confidence": 89.19,
+          "needs_manual_review": true
+        },
+        {
+          "page": 14,
+          "word_count": 371,
+          "mean_word_confidence": 90.31,
+          "needs_manual_review": true
+        },
+        {
+          "page": 15,
+          "word_count": 232,
+          "mean_word_confidence": 40.11,
+          "needs_manual_review": true
+        },
+        {
+          "page": 16,
+          "word_count": 1047,
+          "mean_word_confidence": 81.73,
+          "needs_manual_review": true
+        },
+        {
+          "page": 17,
+          "word_count": 134,
+          "mean_word_confidence": 41.42,
+          "needs_manual_review": true
+        },
+        {
+          "page": 18,
+          "word_count": 981,
+          "mean_word_confidence": 81.15,
+          "needs_manual_review": true
+        }
+      ]
+    },
+    {
+      "source_file": "raw/Документация/Паспорта Насосов/РЭ ЭД.pdf",
+      "source_sha256": "c9f571c3ce269bd4f8f51cc2d1192efa934b8afe123c2e33dc05b88503df8366",
+      "text_file": "Документация/Паспорта Насосов/РЭ ЭД.pdf.txt",
+      "publisher_origin": "ORGANIZER_DOCUMENT",
+      "pages": 28,
+      "page_indexing": "1-based",
+      "dpi": 200,
+      "needs_manual_review": true,
+      "completed_at": "2026-11-13T16:24:23.250917+00:00",
+      "page_results": [
+        {
+          "page": 1,
+          "word_count": 81,
+          "mean_word_confidence": 80.13,
+          "needs_manual_review": true
+        },
+        {
+          "page": 2,
+          "word_count": 270,
+          "mean_word_confidence": 80.55,
+          "needs_manual_review": true
+        },
+        {
+          "page": 3,
+          "word_count": 267,
+          "mean_word_confidence": 90.4,
+          "needs_manual_review": true
+        },
+        {
+          "page": 4,
+          "word_count": 32,
+          "mean_word_confidence": 67.55,
+          "needs_manual_review": true
+        },
+        {
+          "page": 5,
+          "word_count": 297,
+          "mean_word_confidence": 85.4,
+          "needs_manual_review": true
+        },
+        {
+          "page": 6,
+          "word_count": 516,
+          "mean_word_confidence": 89.92,
+          "needs_manual_review": true
+        },
+        {
+          "page": 7,
+          "word_count": 574,
+          "mean_word_confidence": 85.07,
+          "needs_manual_review": true
+        },
+        {
+          "page": 8,
+          "word_count": 67,
+          "mean_word_confidence": 92.49,
+          "needs_manual_review": true
+        },
+        {
+          "page": 9,
+          "word_count": 681,
+          "mean_word_confidence": 90.6,
+          "needs_manual_review": true
+        },
+        {
+          "page": 10,
+          "word_count": 652,
+          "mean_word_confidence": 85.18,
+          "needs_manual_review": true
+        },
+        {
+          "page": 11,
+          "word_count": 668,
+          "mean_word_confidence": 84.06,
+          "needs_manual_review": true
+        },
+        {
+          "page": 12,
+          "word_count": 954,
+          "mean_word_confidence": 60.72,
+          "needs_manual_review": true
+        },
+        {
+          "page": 13,
+          "word_count": 438,
+          "mean_word_confidence": 60.98,
+          "needs_manual_review": true
+        },
+        {
+          "page": 14,
+          "word_count": 806,
+          "mean_word_confidence": 71.5,
+          "needs_manual_review": true
+        },
+        {
+          "page": 15,
+          "word_count": 431,
+          "mean_word_confidence": 88.07,
+          "needs_manual_review": true
+        },
+        {
+          "page": 16,
+          "word_count": 412,
+          "mean_word_confidence": 86.68,
+          "needs_manual_review": true
+        },
+        {
+          "page": 17,
+          "word_count": 530,
+          "mean_word_confidence": 85.0,
+          "needs_manual_review": true
+        },
+        {
+          "page": 18,
+          "word_count": 472,
+          "mean_word_confidence": 85.05,
+          "needs_manual_review": true
+        },
+        {
+          "page": 19,
+          "word_count": 500,
+          "mean_word_confidence": 91.14,
+          "needs_manual_review": true
+        },
+        {
+          "page": 20,
+          "word_count": 662,
+          "mean_word_confidence": 87.27,
+          "needs_manual_review": true
+        },
+        {
+          "page": 21,
+          "word_count": 811,
+          "mean_word_confidence": 88.54,
+          "needs_manual_review": true
+        },
+        {
+          "page": 22,
+          "word_count": 611,
+          "mean_word_confidence": 90.48,
+          "needs_manual_review": true
+        },
+        {
+          "page": 23,
+          "word_count": 817,
+          "mean_word_confidence": 87.54,
+          "needs_manual_review": true
+        },
+        {
+          "page": 24,
+          "word_count": 779,
+          "mean_word_confidence": 91.65,
+          "needs_manual_review": true
+        },
+        {
+          "page": 25,
+          "word_count": 708,
+          "mean_word_confidence": 82.17,
+          "needs_manual_review": true
+        },
+        {
+          "page": 26,
+          "word_count": 634,
+          "mean_word_confidence": 79.97,
+          "needs_manual_review": true
+        },
+        {
+          "page": 27,
+          "word_count": 455,
+          "mean_word_confidence": 85.3,
+          "needs_manual_review": true
+        },
+        {
+          "page": 28,
+          "word_count": 663,
+          "mean_word_confidence": 89.5,
+          "needs_manual_review": true
+        }
+      ]
+    }
+  ],
+  "updated_at": "2026-11-13T16:24:23.251224+00:00"
+}

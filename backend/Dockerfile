@@ -17,6 +17,7 @@ COPY backend/pyproject.toml backend/uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
 COPY --chown=10001:10001 backend/app ./app
 COPY --chown=10001:10001 backend/migrations ./migrations
+COPY deploy/vision_prepare.py /app/vision_prepare.py
 COPY --from=frontend --chown=10001:10001 /site/dist /app/frontend
 RUN mkdir -p /app/photos /app/local-secrets /app/downloads && chown 10001:10001 /app/photos /app/local-secrets /app/downloads && chmod 700 /app/photos
 USER 10001:10001

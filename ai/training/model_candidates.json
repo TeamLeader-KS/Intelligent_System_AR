@@ -1,0 +1,227 @@
+{
+  "checked_on": "2026-11-13",
+  "scope": "RGB industrial pump/motor/seal visual faults and component localization",
+  "conclusion": "No newly verified directly downloadable licensed pump leak/guard/oil detector weights were found. This is a bounded search result, not proof no such model exists.",
+  "approved_new_production_models": [],
+  "existing_corrosion_candidates": "ai/training/sources.json",
+  "controls": "ai/dataset/visual-faults/control/organizer_annotation_plan.json",
+  "candidates": [
+    {
+      "id": "Aim-for-the-Moon/leak-detection-model",
+      "source_url": "https://huggingface.co/Aim-for-the-Moon/leak-detection-model",
+      "revision": "4faf2680ea13dfc0e76808c1972bb19375fde9c9",
+      "license": null,
+      "task": "image_classification",
+      "status": "HOLD_LICENSE_DOMAIN",
+      "reason": "ViT 224 RGB, id2label 0=no_leak,1=leak, no localization. No declared license or verified pump domain.",
+      "metadata_evidence": "ai/dataset/visual-faults/discovery/Aim-for-the-Moon__leak-detection-model.json",
+      "weights_deserialized": false,
+      "pump_quality_metrics": null
+    },
+    {
+      "id": "Gokulavelan/Water-Pump-Assembly-V2",
+      "source_url": "https://huggingface.co/datasets/Gokulavelan/Water-Pump-Assembly-V2",
+      "revision": "2699e273590ff658b7305da8e354622b1a2f9cfd",
+      "license": null,
+      "task": "robot_assembly_video",
+      "status": "REJECT_TASK_LICENSE",
+      "reason": "LeRobot robot assembly trajectories, no pump fault detection labels or declared license.",
+      "metadata_evidence": "ai/dataset/visual-faults/discovery/Gokulavelan__Water-Pump-Assembly-V2.json",
+      "weights_deserialized": false,
+      "pump_quality_metrics": null
+    },
+    {
+      "id": "Sgobir/pipeline_leak_detection2",
+      "source_url": "https://huggingface.co/spaces/Sgobir/pipeline_leak_detection2",
+      "revision": "f0bb27b4f25ffde8c92f78f322ee5f86e6a6c1ca",
+      "license": null,
+      "task": "detection_unverified",
+      "status": "HOLD_LICENSE_DOMAIN_CLASS_ORDER",
+      "reason": "Pipeline checkpoint in Space; no declared weight license/class order. Pipeline gas/water is not verified pump seal leak.",
+      "metadata_evidence": "ai/dataset/visual-faults/discovery/Sgobir__pipeline_leak_detection2.json",
+      "weights_deserialized": false,
+      "pump_quality_metrics": null
+    },
+    {
+      "id": "Verso-Industries/water-leak-dataset",
+      "source_url": "https://huggingface.co/datasets/Verso-Industries/water-leak-dataset",
+      "revision": "f6c8aee63597d6395071b83003f6b879055fc812",
+      "license": "mit",
+      "task": "tabular",
+      "status": "REJECT_MODALITY",
+      "reason": "MIT metadata; tabular/text data, not RGB localization.",
+      "metadata_evidence": "ai/dataset/visual-faults/discovery/Verso-Industries__water-leak-dataset.json",
+      "weights_deserialized": false,
+      "pump_quality_metrics": null
+    },
+    {
+      "id": "beersrobert/pumphouse_dataset_v1",
+      "source_url": "https://huggingface.co/datasets/beersrobert/pumphouse_dataset_v1",
+      "revision": "0529f4700a7c14a0fdd7a7535f619a97e15aa7f4",
+      "license": "cc-by-4.0",
+      "task": "scene_tags",
+      "status": "NOT_APPROVED_FOR_FAULT_TRAINING",
+      "reason": "7 RGB frames; one residential utility scene; no defect boxes or weights; archive license text differs from card.",
+      "metadata_evidence": "ai/dataset/visual-faults/discovery/beersrobert__pumphouse_dataset_v1.json",
+      "weights_deserialized": false,
+      "pump_quality_metrics": null
+    },
+    {
+      "id": "carltontrevor23/leak-detection-models",
+      "source_url": "https://huggingface.co/carltontrevor23/leak-detection-models",
+      "revision": "363f6389d5c49727ca60d31a0f43ee2c8911a617",
+      "license": null,
+      "task": "unknown",
+      "status": "HOLD_LICENSE_DOMAIN_CLASS_ORDER",
+      "reason": "PT/Keras/scaler files; no model card/license, no trustworthy domain/class order.",
+      "metadata_evidence": "ai/dataset/visual-faults/discovery/carltontrevor23__leak-detection-models.json",
+      "weights_deserialized": false,
+      "pump_quality_metrics": null
+    },
+    {
+      "id": "iwin10s/leak-detection-model",
+      "source_url": "https://huggingface.co/iwin10s/leak-detection-model",
+      "revision": "2e231ac8d779afdf91b5c39cddc7eac7cc6d7082",
+      "license": null,
+      "task": "image_classification",
+      "status": "HOLD_LICENSE_DOMAIN",
+      "reason": "ViT 224 RGB, id2label 0=no_leak,1=leak, no localization. No declared license or verified pump domain.",
+      "metadata_evidence": "ai/dataset/visual-faults/discovery/iwin10s__leak-detection-model.json",
+      "weights_deserialized": false,
+      "pump_quality_metrics": null
+    },
+    {
+      "id": "kareem1232/spill_leak_detection",
+      "source_url": "https://huggingface.co/kareem1232/spill_leak_detection",
+      "revision": "7c8352a8d0257c1fd4d10f8d56e16902cbd02e24",
+      "license": null,
+      "task": "segmentation_unverified",
+      "status": "HOLD_LICENSE_DOMAIN_CLASS_ORDER",
+      "reason": "PT checkpoints without declared license/model card/class order; pump/seal domain unverified.",
+      "metadata_evidence": "ai/dataset/visual-faults/discovery/kareem1232__spill_leak_detection.json",
+      "weights_deserialized": false,
+      "pump_quality_metrics": null
+    },
+    {
+      "id": "kareem1232/spill_leak_detection_nano",
+      "source_url": "https://huggingface.co/kareem1232/spill_leak_detection_nano",
+      "revision": "26eeaf9464458c81e106d019caa4ad1db43b41ba",
+      "license": null,
+      "task": "segmentation_unverified",
+      "status": "HOLD_LICENSE_DOMAIN_CLASS_ORDER",
+      "reason": "PT checkpoints without declared license/model card/class order; pump/seal domain unverified.",
+      "metadata_evidence": "ai/dataset/visual-faults/discovery/kareem1232__spill_leak_detection_nano.json",
+      "weights_deserialized": false,
+      "pump_quality_metrics": null
+    },
+    {
+      "id": "luminary-shift/Pump",
+      "source_url": "https://huggingface.co/datasets/luminary-shift/Pump",
+      "revision": "b5b493ccfcbd68d4c9d977d6335a2700889dec4c",
+      "license": "cc-by-nc-4.0",
+      "task": "CFD_simulation",
+      "status": "REJECT_MODALITY",
+      "reason": "STL/VTP/VTU simulation geometry/fields, not RGB fault labels; noncommercial license.",
+      "metadata_evidence": "ai/dataset/visual-faults/discovery/luminary-shift__Pump.json",
+      "weights_deserialized": false,
+      "pump_quality_metrics": null
+    },
+    {
+      "id": "svinz/Water_Leak_Dataset",
+      "source_url": "https://huggingface.co/datasets/svinz/Water_Leak_Dataset",
+      "revision": "89a2eece71a5498f9ad64fc78808b8189482f1e7",
+      "license": null,
+      "task": "tabular",
+      "status": "REJECT_MODALITY_LICENSE",
+      "reason": "CSV sensor/tabular records, not RGB pump photos; no declared license.",
+      "metadata_evidence": "ai/dataset/visual-faults/discovery/svinz__Water_Leak_Dataset.json",
+      "weights_deserialized": false,
+      "pump_quality_metrics": null
+    },
+    {
+      "id": "tawanprakopsaen04/pump-ai-v3",
+      "source_url": "https://huggingface.co/datasets/tawanprakopsaen04/pump-ai-v3",
+      "revision": "e798bd1153644a1e0844c73b009dfc1b7440f487",
+      "license": null,
+      "task": "unknown",
+      "status": "REJECT_EMPTY",
+      "reason": "Repository contains only .gitattributes; no data or license.",
+      "metadata_evidence": "ai/dataset/visual-faults/discovery/tawanprakopsaen04__pump-ai-v3.json",
+      "weights_deserialized": false,
+      "pump_quality_metrics": null
+    },
+    {
+      "id": "roboflow-oil-leak-68",
+      "source_url": "https://universe.roboflow.com/tryout/oil-leak",
+      "license": "MIT (project page)",
+      "task": "detection",
+      "classes": [
+        "oil"
+      ],
+      "reported_images": 68,
+      "status": "EXPORT_REQUIRES_AUTHORIZED_USER_ZIP",
+      "reason": "Public page exists; export returned HTTP 401 without API credentials. No downloadable ready weights verified. Pump/seal suitability still needs image QA."
+    },
+    {
+      "id": "roboflow-leak-593",
+      "source_url": "https://universe.roboflow.com/s-workspace-fz2uo/leak-4pyvb",
+      "license": "CC-BY-4.0 (project page)",
+      "task": "detection",
+      "classes": [
+        "leak"
+      ],
+      "reported_images": 593,
+      "status": "EXPORT_REQUIRES_AUTHORIZED_USER_ZIP",
+      "reason": "Export returned HTTP 401 without API credentials; hosted Instant model is not a verified offline checkpoint. Pump/seal suitability still needs image QA."
+    },
+    {
+      "id": "roboflow-leak-3041",
+      "source_url": "https://universe.roboflow.com/leak-adhw8/leak-pzu8f",
+      "license": "CC-BY-4.0 (project page)",
+      "task": "detection",
+      "classes": [
+        "0"
+      ],
+      "reported_images": 3041,
+      "status": "HOLD_DOMAIN_AND_AUTHORIZED_EXPORT",
+      "reason": "Pipe water-jet preview does not establish pump seal domain; generic class name needs remapping by visual review. Export requires authorization."
+    },
+    {
+      "id": "pipeline-research-yolov8",
+      "source_url": "https://github.com/Rizama-Victor/Development-of-an-Object-Detection-Algorithm-for-Crude-Oil-Pipeline-Leakage-Detection",
+      "license": "MIT repository code, dataset rights not separately established",
+      "task": "detection",
+      "status": "DATA_AND_WEIGHTS_ON_REQUEST",
+      "reason": "Author README explicitly offers dataset/model weights only on request. No eligible direct training package verified."
+    },
+    {
+      "id": "DLR-critical-infrastructure",
+      "source_url": "https://www.frontiersin.org/journals/signal-processing/articles/10.3389/frsip.2026.1761293/full",
+      "task": "object_detection_instance_segmentation",
+      "classes": [
+        "pipes",
+        "pumps",
+        "tanks",
+        "valves"
+      ],
+      "license": null,
+      "status": "DATA_NOT_PUBLIC_SECURITY_RESTRICTIONS",
+      "reason": "Primary article data availability statement says datasets cannot be shared due to critical infrastructure security; access on request. Article openness does not license unavailable data/weights."
+    },
+    {
+      "id": "qwen3-vl-4b-instruct",
+      "source_url": "https://ollama.com/library/qwen3-vl:4b-instruct",
+      "license": "Apache-2.0",
+      "task": "general_multimodal_generation",
+      "size_approx_gb": 3.3,
+      "status": "NOT_DOWNLOADED_NO_PROVEN_PUMP_GAIN",
+      "reason": "Generic larger model candidate only, no measured improvement on these controls. Parent explicitly deferred large downloads."
+    }
+  ],
+  "safety": {
+    "unknown_pickle_loaded": false,
+    "new_large_weights_downloaded": false,
+    "actual_accuracy_claimed": false,
+    "organizer_images_training_allowed": false
+  }
+}

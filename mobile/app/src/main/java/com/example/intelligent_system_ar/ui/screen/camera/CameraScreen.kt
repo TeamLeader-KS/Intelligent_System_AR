@@ -27,6 +27,7 @@ import com.example.intelligent_system_ar.ui.MainViewModel
 import com.example.intelligent_system_ar.ui.component.EquipmentDialog
 import com.example.intelligent_system_ar.ui.component.MainTopBar
 import com.example.intelligent_system_ar.ui.component.ComponentDetailDialog
+import com.example.intelligent_system_ar.ui.component.ServerVisionDialog
 import com.example.intelligent_system_ar.ui.screen.login.LoginScreen
 import com.example.intelligent_system_ar.ui.theme.*
 
@@ -66,8 +67,10 @@ fun CameraScreen(viewModel: MainViewModel) {
     var confirmedNumber by remember { mutableStateOf("") }
     var showManualChecks by remember { mutableStateOf(false) }
     var confirmDiscardWork by remember { mutableStateOf(false) }
+    var showServerVision by remember { mutableStateOf(false) }
     val panelHeight=(LocalConfiguration.current.screenHeightDp*0.52f).dp
     LaunchedEffect(status.error) { if(status.error) capturing=false }
+    LaunchedEffect(viewModel.lastVisionInspection?.inspectionId) { if(viewModel.lastVisionInspection!=null) showServerVision=true }
 
     Box(Modifier.fillMaxSize().background(ArBackground)) {
         if (permissionGranted) {
@@ -81,7 +84,7 @@ fun CameraScreen(viewModel: MainViewModel) {
                 camera.bind(lifecycleOwner)
                 onDispose { cameraView=null; camera.release() }
             }
-            AndroidView(factory={camera}, update={it.setAnalyzing(analyzing && !showEquipment && !showComponent && !showManualChecks && !confirmDiscardWork && qrCandidate==null && nameplateCandidates==null)},
+            AndroidView(factory={camera}, update={it.setAnalyzing(analyzing && !showEquipment && !showComponent && !showManualChecks && !showServerVision && !confirmDiscardWork && qrCandidate==null && nameplateCandidates==null)},
                 modifier=Modifier.fillMaxSize())
         } else {
             Column(Modifier.align(Alignment.Center).padding(24.dp), horizontalAlignment=Alignment.CenterHorizontally) {
@@ -112,7 +115,24 @@ fun CameraScreen(viewModel: MainViewModel) {
                         Text(if(readingNameplate) "Читаем шильдик…" else "Считать шильдик")
                     }
                 }
-                viewModel.card?.let { Text(it.name,color=ArTextPrimary,style=MaterialTheme.typography.bodySmall) }
+                viewModel.card?.let { equipment ->
+                    Text(equipment.name,color=ArTextPrimary,style=MaterialTheme.typography.bodySmall)
+                    OutlinedButton(onClick={
+                        val componentId=viewModel.selectedComponentId
+                        capturing=cameraView?.captureNextFrame { snapshot ->
+                            capturing=false
+                            analyzing=false
+                            viewModel.saveVisionSnapshot(snapshot,equipment.id,componentId)
+                        } == true
+                    },enabled=analyzing && !viewModel.isSaving && !capturing && status.ready && !status.error,modifier=Modifier.fillMaxWidth()) {
+                        Text("ИИ-анализ узлов на сервере")
+                    }
+                    Text("Один кадр отправится только на локальный сервер. Анализ может занять до двух минут; выводы предварительные.",color=ArTextSecondary,style=MaterialTheme.typography.bodySmall)
+                }
+                if(viewModel.isVisionAnalyzing) {
+                    LinearProgressIndicator(modifier=Modifier.fillMaxWidth())
+                    Text("Локальный сервер анализирует кадр…",color=ArTextPrimary)
+                }
                 viewModel.selectedComponent?.let { component ->
                     Text("Узел выбран вручную: ${component.name}",color=ArTextPrimary,style=MaterialTheme.typography.bodySmall)
                     Text("Модель распознаёт признаки поверхности; тип узла она не определяет.",color=ArTextSecondary,style=MaterialTheme.typography.bodySmall)
@@ -142,7 +162,9 @@ fun CameraScreen(viewModel: MainViewModel) {
                     result.componentResource?.serviceRemainingHours?.let { Text("Расчётно до ТО: $it ч",color=ArTextSecondary) }
                     result.diagnostics.orEmpty().forEach { Text("${it.title}. ${it.recommendation}",color=ArTextPrimary,style=MaterialTheme.typography.bodySmall) }
                 }
-                if(viewModel.pendingCount>0) OutlinedButton(onClick=viewModel::flushPending,
+                viewModel.lastVisionInspection?.let { TextButton(onClick={showServerVision=true}) { Text("Результат серверного ИИ №${it.inspectionId}") } }
+                if(viewModel.pendingVisionCount>0) Text("Серверных запросов в очереди: ${viewModel.pendingVisionCount}. Для повтора нажмите «Отправить очередь».",color=ArTextSecondary,style=MaterialTheme.typography.bodySmall)
+                if(viewModel.pendingCount>0) OutlinedButton(onClick={viewModel.flushPending()},
                     enabled=!viewModel.isSaving,modifier=Modifier.fillMaxWidth()) { Text("Отправить очередь (${viewModel.pendingCount})") }
                 if(viewModel.pendingCount>0) TextButton(onClick={confirmDiscardWork=true},enabled=!viewModel.isSaving) { Text("Отменить запросы работ при конфликте") }
             }
@@ -150,6 +172,7 @@ fun CameraScreen(viewModel: MainViewModel) {
     }
     if (showEquipment) EquipmentDialog(viewModel,onDismiss={showEquipment=false},onComponentOpen={showEquipment=false;showComponent=true})
     if (showComponent) ComponentDetailDialog(viewModel,onDismiss={showComponent=false})
+    if(showServerVision) ServerVisionDialog(viewModel,onDismiss={showServerVision=false},onOpenComponent={showServerVision=false;showComponent=true})
     if(showManualChecks) {
         val checks=linkedMapOf("SEAL_LEAK" to "Утечка у уплотнения", "FRAME_CORROSION" to "Коррозия фундаментной рамы",
             "LOOSE_ANCHOR" to "Ослаблен анкерный болт", "OIL_DARK" to "Масло тёмное или мутное", "OIL_LOW" to "Масло ниже MIN",

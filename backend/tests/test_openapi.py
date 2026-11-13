@@ -1,6 +1,7 @@
 from app.main import create_app
 from app.presentation import schemas
 from app.presentation import field_schemas
+from app.presentation import source_schemas
 from app.presentation.openapi import OPERATIONS, SCHEMA_EXAMPLES
 
 
@@ -22,6 +23,8 @@ def test_openapi_operations_have_russian_guide_examples_and_security():
                 assert response["description"]
                 if code == "204":
                     assert "content" not in response
+                elif code == "200" and path == "/api/v1/source-documents/{document_id}/file":
+                    assert response["content"]["application/octet-stream"]["schema"] == {"type": "string", "format": "binary"}
                 elif not (code == "200" and ("/photos/" in path or path.endswith("/export"))):
                     assert response["content"]["application/json"].get("examples"), (method,path,code)
     assert schema["paths"]["/api/v1/users"]["get"]["security"] == [{"AdminSession":[]}]
@@ -33,7 +36,7 @@ def test_openapi_operations_have_russian_guide_examples_and_security():
 
 def test_documented_schema_examples_pass_real_http_validation():
     for name, value in SCHEMA_EXAMPLES.items():
-        model = getattr(schemas, name, None) or getattr(field_schemas, name)
+        model = getattr(schemas, name, None) or getattr(field_schemas, name, None) or getattr(source_schemas, name)
         model.model_validate(value)
     schema = create_app().openapi()
     for path,item in schema["paths"].items():
@@ -41,7 +44,7 @@ def test_documented_schema_examples_pass_real_http_validation():
             for response in operation["responses"].values():
                 media = response.get("content", {}).get("application/json", {})
                 name = media.get("schema", {}).get("$ref", "").rsplit("/", 1)[-1]
-                model = getattr(schemas, name, None) or getattr(field_schemas, name, None)
+                model = getattr(schemas, name, None) or getattr(field_schemas, name, None) or getattr(source_schemas, name, None)
                 if model is not None:
                     for example in media.get("examples", {}).values():
                         model.model_validate(example["value"])

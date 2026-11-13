@@ -69,6 +69,10 @@ def _sections(body: dict) -> list[tuple[str, list[tuple[str, str]]]]:
     for index, finding in enumerate(original.get("detections") or [], 1):
         sections.append((f"Визуальная находка {index}", _fields(finding, (
             ("class_id", "ID класса"), ("class_name", "Название класса"), ("kind", "Тип находки"),
+            ("component_name", "Распознанный узел"), ("component_type", "Тип узла модели"),
+            ("component_id", "Предложенный ID компонента"), ("association", "Привязка к карточке"),
+            ("code", "Код визуального признака"), ("description", "Описание видимого признака"),
+            ("recommendation", "Предварительная рекомендация"),
             ("confidence", "Уверенность (0–1)"), ("accepted", "Выше порога"),
             ("box", "Рамка исходного кадра"), ("defect_id", "ID дефекта в справочнике")))))
     if review := body.get("latest_review"):

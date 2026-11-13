@@ -1,6 +1,7 @@
 import {useState} from "react";
 import {useQuery,useQueryClient} from "@tanstack/react-query";
 import {useRepository} from "./context";
+import {PassportFacts} from "./passport-facts";
 import type {ComponentWorkInput,Diagnostic,DiagnosticPreview,EquipmentCard,EquipmentComponent,SensorReading,VisualCheck,WorkAction} from "../domain/models";
 
 const workNames:Record<WorkAction,string>={INSPECTED:"Проверен",SERVICED:"Обслуживание",REPLACED:"Замена",READINGS:"Ввод наработки",STARTED:"Запустить счёт моточасов",STOPPED:"Остановить счёт моточасов"};
@@ -33,6 +34,7 @@ function Diagnostics({items}:{items:Diagnostic[]}) {
 function ComponentCard({component}:{component:EquipmentComponent}) {
  const resource=component.resource;
  return <><h3>{component.name}</h3><p>{component.model}</p>
+ <PassportFacts data_origin={component.data_origin} facts={component.facts}/>
  <div className="facts"><div><small>Состояние счётчика</small><strong>{component.runtime_state==="RUNNING"?"В работе — часы считаются":"Остановлен — часы не считаются"}</strong></div>
  <div><small>Наработка</small><strong>{number(component.operating_hours)} ч</strong></div>
  <div><small>Дата установки</small><strong>{time(component.installed_on)}</strong></div><div><small>Последнее обслуживание</small><strong>{time(component.last_serviced_at)}</strong></div></div>
@@ -140,6 +142,7 @@ function EquipmentMaintenance({id}:{id:number}) {
  if(query.isError)return <section className="panel"><p role="alert" className="error">{errorMessage(query.error)}</p><button onClick={()=>void query.refetch()}>Повторить</button></section>;
  const card=query.data;const component=card.components.find(item=>item.id===selected)||card.components[0];
  return <><section className="panel"><h2>{card.name}</h2><p>Инвентарный номер: <strong>{card.inventory_number}</strong></p><p>Заводской номер: <strong>{card.serial_number||"Не указан"}</strong></p><p className="passport">{card.passport}</p>
+ <PassportFacts data_origin={card.data_origin} facts={card.facts}/>
  {component?<><label>Компонент<select value={component.id} onChange={e=>setSelected(Number(e.target.value))}>{card.components.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
  <ComponentCard component={component}/><WorkForm key={component.id} component={component}/><WorkHistory key={`history-${component.id}`} component={component}/></>:<p>Компоненты ещё не добавлены.</p>}</section>
  {component&&<DiagnosticPanel key={card.id} card={card} component={component}/>}

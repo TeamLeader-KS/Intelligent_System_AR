@@ -79,6 +79,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         private set
     var pendingCount by mutableStateOf(0)
         private set
+    var pendingVisionCount by mutableStateOf(0)
+        private set
+    var isVisionAnalyzing by mutableStateOf(false)
+        private set
+    var lastVisionInspection by mutableStateOf<ServerInspectionDto?>(null)
+        private set
+    var lastVisionImage by mutableStateOf<ByteArray?>(null)
+        private set
     var workHistory by mutableStateOf<ComponentWorkHistoryDto?>(null)
         private set
     var isLoadingWork by mutableStateOf(false)
@@ -137,7 +145,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 accessToken = token
                 canRecordWork = user.role in listOf("ADMIN", "MASTER", "ENGINEER")
                 refreshEquipment()
-                flushPending()
+                flushPending(includeVision=false)
             } catch (e: LoginException) {
                 loginError = e.message
             } catch (e: HttpException) {
@@ -181,6 +189,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         inspectionComment = ""
         visualChecks = emptySet()
         pendingCount = 0
+        pendingVisionCount = 0
+        isVisionAnalyzing = false
+        lastVisionInspection = null
+        lastVisionImage = null
         isSaving = false
         canRecordWork = false
         saveMessage = null
@@ -381,15 +393,35 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun flushPending() {
+    fun saveVisionSnapshot(snapshot: CapturedInspection,equipmentId: Int,componentId: Int?) {
+        if(accessToken==null || isSaving) return
+        val generation=sessionGeneration
+        val queue=outbox()
+        val entry=PendingOperation(UUID.randomUUID().toString(),equipmentId,componentId=componentId,
+            vision=true,capturedAt=snapshot.capturedAt)
+        lastVisionInspection=null
+        lastVisionImage=null
+        queueJob=viewModelScope.launch {
+            isSaving=true
+            try {
+                withContext(Dispatchers.IO) { queue.enqueue(entry,snapshot.jpeg) }
+                if(generation!=sessionGeneration) return@launch
+                saveMessage="Кадр сохранён. Анализ одного снимка на локальном сервере…"
+                sendPending(queue,generation,includeVision=true,visionId=entry.id)
+            } catch(e: IOException) { saveMessage=e.message ?: "Не удалось сохранить кадр для серверного анализа" }
+            finally { if(generation==sessionGeneration) {isSaving=false;isVisionAnalyzing=false} }
+        }
+    }
+
+    fun flushPending(includeVision: Boolean=true) {
         if (accessToken == null || isSaving) return
         val queue=outbox()
         val generation=sessionGeneration
         queueJob=viewModelScope.launch {
             isSaving=true
-            try { sendPending(queue,generation) }
+            try { sendPending(queue,generation,includeVision=includeVision) }
             catch (e: IOException) { saveMessage=e.message ?: "Не удалось прочитать очередь" }
-            finally { if(generation == sessionGeneration) isSaving=false }
+            finally { if(generation == sessionGeneration) {isSaving=false;isVisionAnalyzing=false} }
         }
     }
 
@@ -402,10 +434,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 val remaining=withContext(Dispatchers.IO) {
                     queue.entries().filter { it.work!=null }.forEach { queue.remove(it) }
-                    queue.entries().size
+                    queue.entries()
                 }
                 if(generation==sessionGeneration) {
-                    pendingCount=remaining
+                    pendingCount=remaining.size
+                    pendingVisionCount=remaining.count { it.vision }
                     saveMessage="Локальные запросы работ отменены. Уже принятые сервером записи сохранены. Обновите карточку перед новой работой."
                     card?.id?.let { selectEquipment(it) }
                 }
@@ -414,16 +447,38 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private suspend fun sendPending(queue: InspectionOutbox, generation: Int) {
+    private suspend fun sendPending(queue: InspectionOutbox, generation: Int,includeVision: Boolean=false,visionId: String?=null) {
         val token=accessToken ?: return
         val client=api
-        val entries=withContext(Dispatchers.IO) { queue.entries() }
-        pendingCount=entries.size
+        val allEntries=withContext(Dispatchers.IO) { queue.entries() }
+        pendingCount=allEntries.size
+        pendingVisionCount=allEntries.count { it.vision }
+        val entries=allEntries.filter { it.canSend(includeVision,visionId) }
         if(entries.isEmpty()) return
+        var sendingVision=false
         try {
             for (entry in entries) {
                 if (generation != sessionGeneration) return
-                if (entry.inspection != null) {
+                sendingVision=entry.vision
+                if(entry.vision) {
+                    isVisionAnalyzing=true
+                    val photo=queue.photo(entry)
+                    if(!photo.isFile) throw IOException("Снимок для серверного анализа отсутствует")
+                    val visionClient=ApiClient.createVision(serverUrl)
+                    val text=MediaType.parse("text/plain")
+                    val response=visionClient.analyzeVision("Bearer $token",entry.id,
+                        RequestBody.create(text,entry.equipmentId.toString()),RequestBody.create(text,"CAMERA"),
+                        entry.componentId?.let { RequestBody.create(text,it.toString()) },
+                        entry.capturedAt?.let { RequestBody.create(text,it) },
+                        MultipartBody.Part.createFormData("image","frame.jpg",RequestBody.create(MediaType.parse("image/jpeg"),photo)))
+                    if(response.analysisLocation!="LOCAL_SERVER" || response.equipmentId!=entry.equipmentId || response.inspectionId<=0)
+                        throw JsonParseException("Некорректный контракт серверного ИИ")
+                    val jpeg=withContext(Dispatchers.IO) { photo.readBytes() }
+                    if(generation!=sessionGeneration) return
+                    lastVisionImage=jpeg
+                    lastVisionInspection=response
+                    isVisionAnalyzing=false
+                } else if (entry.inspection != null) {
                     val response=if(entry.inspectionId == null) client.saveInspection("Bearer $token",entry.id,entry.inspection)
                         else client.inspection("Bearer $token",entry.inspectionId)
                     val id=response.inspectionId
@@ -439,18 +494,24 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 withContext(Dispatchers.IO) { queue.remove(entry) }
                 if (generation != sessionGeneration) return
                 pendingCount--
+                if(entry.vision) pendingVisionCount--
             }
-            saveMessage="Осмотры и работы сохранены на сервере вместе с фотографиями"
+            saveMessage=if(pendingVisionCount>0) "Записи отправлены. В очереди остались запросы серверного ИИ — они отправляются только по вашему нажатию."
+                else "Осмотры и работы сохранены на сервере вместе с фотографиями"
             card?.id?.let { selectEquipment(it) }
         } catch(e: HttpException) {
             saveMessage=when(e.code()) {
                 401 -> "Сессия истекла. Очередь сохранена: войдите под тем же пользователем."
                 409 -> "Конфликт данных: запись оставлена в очереди. Обновите карточку; повтор не создаёт дубликат."
                 422 -> "Сервер отклонил запись: проверьте регистрацию модели и данные осмотра. Запись сохранена в очереди."
+                502 -> if(sendingVision) "Локальная модель вернула непонятный ответ. Кадр сохранён для повторного анализа." else "Ошибка ответа сервера. Запись остаётся в очереди."
+                503 -> if(sendingVision) "Серверный ИИ недоступен или модель ещё не загружена. Кадр сохранён; быстрый анализ на телефоне работает отдельно." else "Сервер временно недоступен. Запись остаётся в очереди."
+                504 -> if(sendingVision) "Серверный ИИ не уложился в таймаут. Кадр и ключ повтора сохранены; повторите отправку вручную." else "Таймаут сервера. Запись остаётся в очереди."
                 else -> "${message(e)}. Запись остаётся в очереди."
             }
         } catch(e: IOException) { saveMessage="Нет подтверждения сервера. Запись сохранена на телефоне; нажмите «Отправить очередь»." }
         catch(e: JsonParseException) { saveMessage="Неверный ответ сервера. Запись остаётся в очереди для безопасного повтора." }
+        finally { if(generation==sessionGeneration) isVisionAnalyzing=false }
     }
 
     private fun AccountDto.toUserState() = UserState(

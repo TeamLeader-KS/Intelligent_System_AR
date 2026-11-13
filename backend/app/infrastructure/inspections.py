@@ -49,3 +49,13 @@ class PostgresInspectionRepository:
         with self.sessions.begin() as db:
             db.execute(update(Inspection).where(Inspection.id == inspection_id, Inspection.processing_status == "PROCESSING")
                        .values(processing_status="FAILED", error=body, response_status=status, cleanup_pending=cleanup_pending))
+
+    def retry_vision(self, inspection_id: int, request_hash: str) -> InspectionRecord | None:
+        with self.sessions.begin() as db:
+            row = db.execute(update(Inspection).where(
+                Inspection.id == inspection_id, Inspection.request_hash == request_hash,
+                Inspection.processing_status == "FAILED", Inspection.cleanup_pending.is_(False),
+                Inspection.error["error"]["code"].astext.in_(("VISION_BUSY", "VISION_TIMEOUT", "VISION_UNAVAILABLE", "VISION_INVALID_RESPONSE")))
+                .values(processing_status="PROCESSING", error=None, response_status=None,
+                        deadline=func.now() + timedelta(minutes=5)).returning(*INSPECTION_COLUMNS)).mappings().first()
+            return InspectionRecord(**row) if row else None

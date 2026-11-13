@@ -19,6 +19,11 @@ from app.infrastructure.reviews import PostgresReviewRepository
 from app.infrastructure.queries.reviews import PostgresReviewQueries
 from app.application.use_case.field_service import FieldServiceUseCase
 from app.infrastructure.field_service import PostgresFieldServiceRepository
+from app.application.use_case.vision import VisionInspectionUseCase
+from app.infrastructure.local_vision import OllamaVision
+from app.application.use_case.sources import SourcesUseCase
+from app.infrastructure.queries.sources import PostgresSourceQueries
+import os
 
 @dataclass(frozen=True)
 class Services:
@@ -33,6 +38,8 @@ class Services:
     reporting: ReportingUseCase
     reviews: ReviewUseCase
     field_service: FieldServiceUseCase
+    vision: VisionInspectionUseCase
+    sources: SourcesUseCase
 
 def create_services(*, session_factory, analysis_mode: str = "disabled") -> Services:
     if analysis_mode not in ("disabled", "mock"):
@@ -49,6 +56,12 @@ def create_services(*, session_factory, analysis_mode: str = "disabled") -> Serv
     inspections = InspectionsUseCase(catalogue=queries, records=records,
                                     queries=PostgresInspectionQueries(session_factory, records), analyzer=preview,
                                     storage_backend=storage_backend, storages=storages, reviews=review_queries)
+    field_service = FieldServiceUseCase(records=PostgresFieldServiceRepository(session_factory), catalogue=queries,
+                                        inspections=inspections, inspection_records=records,
+                                        inspection_queries=PostgresInspectionQueries(session_factory, records),
+                                        images=PillowImageDecoder(), storage_backend=storage_backend, storages=storages)
+    vision_url = os.getenv("VISION_BASE_URL")
+    vision_model = OllamaVision(vision_url, os.getenv("VISION_MODEL", "qwen3-vl:2b-instruct")) if vision_url else None
     return Services(
         auth=AuthService(repository,passwords),
         users=CreateUserUseCase(users=repository,passwords=passwords),
@@ -60,8 +73,8 @@ def create_services(*, session_factory, analysis_mode: str = "disabled") -> Serv
         inspections=inspections,
         reporting=ReportingUseCase(records=PostgresReportingRepository(session_factory), queries=PostgresReportingQueries(session_factory)),
         reviews=ReviewUseCase(records=PostgresReviewRepository(session_factory), queries=review_queries),
-        field_service=FieldServiceUseCase(records=PostgresFieldServiceRepository(session_factory), catalogue=queries,
-                                         inspections=inspections, inspection_records=records,
-                                         inspection_queries=PostgresInspectionQueries(session_factory, records),
-                                         images=PillowImageDecoder(), storage_backend=storage_backend, storages=storages),
+        field_service=field_service,
+        vision=VisionInspectionUseCase(field_service=field_service, inspections=inspections, records=records,
+                                        images=PillowImageDecoder(), model=vision_model),
+        sources=SourcesUseCase(PostgresSourceQueries(session_factory)),
     )

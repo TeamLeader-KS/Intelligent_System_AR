@@ -4,8 +4,18 @@ import com.example.intelligent_system_ar.data.remote.model.*
 import retrofit2.http.*
 import okhttp3.MultipartBody
 import okhttp3.ResponseBody
+import okhttp3.RequestBody
 
 interface DirectoryApi : AuthApi {
+    @Multipart
+    @POST("inspections/vision")
+    suspend fun analyzeVision(@Header("Authorization") token: String,@Header("Idempotency-Key") key: String,
+                              @Part("equipment_id") equipmentId: RequestBody,@Part("source") source: RequestBody,
+                              @Part("component_id") componentId: RequestBody?,@Part("captured_at") capturedAt: RequestBody?,
+                              @Part image: MultipartBody.Part): ServerInspectionDto
+
+    @GET("inspections/{id}")
+    suspend fun serverInspection(@Header("Authorization") token: String,@Path("id") id: Int): ServerInspectionDto
     @Streaming
     @GET("inspections/{id}/export")
     suspend fun exportInspection(@Header("Authorization") token: String,@Path("id") id: Int,

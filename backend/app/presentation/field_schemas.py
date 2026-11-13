@@ -188,6 +188,8 @@ class ComponentOut(NewComponent):
     last_event_at: AwareDatetime | None
     runtime_state: Literal["RUNNING", "STOPPED"] = "STOPPED"
     run_started_at: AwareDatetime | None = None
+    data_origin: str = "USER"
+    facts: list[dict] = Field(default_factory=list)
 
 
 class ComponentCard(ComponentOut):

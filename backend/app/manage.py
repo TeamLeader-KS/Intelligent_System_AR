@@ -54,7 +54,7 @@ def main():
         if args.command == "serve-local":
             os.execvp("uvicorn", ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"])
     if args.command in ("bootstrap-local", "bootstrap-local-files"):
-        from .infrastructure.demo import seed_pump_demo
+        from .infrastructure.demo import seed_pump_demo, seed_gallery_cards
         if os.getenv("LOCAL_DEMO_ENABLED") != "true":
             parser.error("bootstrap-local разрешён только при LOCAL_DEMO_ENABLED=true")
         try:
@@ -71,6 +71,20 @@ def main():
         try:
             migrate(engine)
             result = seed_pump_demo(sessions(engine), credentials["employee_password"], admin_password=credentials["admin_password"])
+            examples = os.getenv("CV_EXAMPLE_PATH")
+            if examples:
+                result["new_gallery_cards"] = seed_gallery_cards(sessions(engine), result["equipment_id"], Path(examples).parent / "pumps" / "manifest.json")
+            organizer_directory = os.getenv("ORGANIZER_DATA_PATH")
+            if organizer_directory:
+                from sqlalchemy import select
+                from .infrastructure.models import Equipment
+                from .infrastructure.organizer_import import import_organizer_data
+                with sessions(engine)() as db:
+                    workshop_id = db.scalar(select(Equipment.workshop_id).where(Equipment.id == result["equipment_id"]))
+                # Prepared facts are shipped in Git. Raw originals are optional and
+                # are independently SHA-verified whenever an original is downloaded.
+                result["organizer_data"] = import_organizer_data(sessions(engine), Path(organizer_directory), workshop_id,
+                                                                verify_originals=False)
             print(json.dumps(result, ensure_ascii=False))
             if args.command == "bootstrap-local-files":
                 print("Сайт: http://localhost:8001/industrial-vision/")

@@ -33,9 +33,9 @@ with context.begin_transaction():
             for table in required:
                 expected_columns = set(Base.metadata.tables[table].columns.keys())
                 if table == "equipment_components":
-                    expected_columns -= {"runtime_state", "run_started_at"}
+                    expected_columns -= {"runtime_state", "run_started_at", "data_origin", "facts"}
                 if table == "equipment":
-                    expected_columns -= {"serial_number"}
+                    expected_columns -= {"serial_number", "data_origin", "facts"}
                 if table == "issues" and previous < "0004":
                     expected_columns -= {"closed_by", "close_review_id", "close_reason", "resolution"}
                 existing_columns = {column["name"] for column in schema_inspector.get_columns(table)}

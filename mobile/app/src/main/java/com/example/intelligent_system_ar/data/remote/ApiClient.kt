@@ -20,4 +20,12 @@ object ApiClient {
         .addConverterFactory(GsonConverterFactory.create())
         .build()
         .create(DirectoryApi::class.java)
+
+    // Heavy single-frame inference has a longer timeout than ordinary directory/auth calls.
+    fun createVision(baseUrl: String): DirectoryApi = Retrofit.Builder()
+        .baseUrl(ServerConfig.normalize(baseUrl))
+        .client(http.newBuilder().readTimeout(120,TimeUnit.SECONDS).callTimeout(135,TimeUnit.SECONDS).build())
+        .addConverterFactory(GsonConverterFactory.create())
+        .build()
+        .create(DirectoryApi::class.java)
 }

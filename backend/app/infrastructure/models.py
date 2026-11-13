@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from sqlalchemy import Boolean, Date, DateTime, Double, ForeignKey, Integer, String, Text, func, UniqueConstraint, CheckConstraint, Index
+from sqlalchemy import Boolean, Date, DateTime, Double, ForeignKey, Integer, BigInteger, String, Text, func, UniqueConstraint, CheckConstraint, Index
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -35,6 +35,8 @@ class Equipment(Base):
     type_id: Mapped[int] = mapped_column(ForeignKey("equipment_types.id"))
     passport: Mapped[str] = mapped_column(Text, default="")
     serial_number: Mapped[str | None] = mapped_column(String(120), index=True)
+    data_origin: Mapped[str] = mapped_column(String(32), default="USER", server_default="USER")
+    facts: Mapped[list] = mapped_column(JSONB, default=list, server_default="[]")
 
 class DefectType(Base):
     __tablename__ = "defect_types"
@@ -78,6 +80,35 @@ class EquipmentComponent(Base):
     revision: Mapped[int] = mapped_column(Integer, default=0)
     runtime_state: Mapped[str] = mapped_column(String(8), default="STOPPED", server_default="STOPPED")
     run_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    data_origin: Mapped[str] = mapped_column(String(32), default="USER", server_default="USER")
+    facts: Mapped[list] = mapped_column(JSONB, default=list, server_default="[]")
+
+
+class SourceDocument(Base):
+    __tablename__ = "source_documents"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    workshop_id: Mapped[int] = mapped_column(ForeignKey("workshops.id"), index=True)
+    name: Mapped[str] = mapped_column(String(256))
+    source_path: Mapped[str] = mapped_column(Text)
+    original_path: Mapped[str] = mapped_column(Text)
+    public_source: Mapped[str] = mapped_column(Text)
+    bytes: Mapped[int] = mapped_column(BigInteger)
+    media_type: Mapped[str] = mapped_column(String(128))
+    details: Mapped[dict] = mapped_column(JSONB)
+    imported_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ReferenceDataset(Base):
+    __tablename__ = "reference_datasets"
+    id: Mapped[str] = mapped_column(String(100), primary_key=True)
+    workshop_id: Mapped[int] = mapped_column(ForeignKey("workshops.id"))
+    equipment_id: Mapped[int | None] = mapped_column(ForeignKey("equipment.id"))
+    document_id: Mapped[str] = mapped_column(ForeignKey("source_documents.id"))
+    name: Mapped[str] = mapped_column(String(256))
+    sheet: Mapped[str] = mapped_column(String(256))
+    headers: Mapped[list] = mapped_column(JSONB)
+    rows: Mapped[list] = mapped_column(JSONB)
+    details: Mapped[dict] = mapped_column(JSONB)
 
 
 class ComponentWork(Base):

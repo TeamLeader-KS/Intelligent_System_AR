@@ -3,6 +3,8 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from starlette.datastructures import UploadFile
 from starlette.exceptions import HTTPException
 from typing import Literal
+from datetime import datetime, timedelta, timezone
+from pydantic import AwareDatetime, field_validator
 from python_multipart.exceptions import MultipartParseError
 from app.application.dtos.analysis import MAX_IMAGE_BYTES
 from app.domain.errors import AnalysisError
@@ -14,6 +16,21 @@ class PreviewForm(BaseModel):
     model_config = ConfigDict(extra="forbid")
     equipment_id: int = Field(gt=0)
     source: Literal["CAMERA", "GALLERY"]
+
+
+class VisionForm(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    equipment_id: int = Field(gt=0)
+    component_id: int | None = Field(default=None, gt=0)
+    captured_at: AwareDatetime | None = None
+    source: Literal["CAMERA"] = "CAMERA"
+
+    @field_validator("captured_at")
+    @classmethod
+    def capture_time(cls, value):
+        if value is not None and value > datetime.now(timezone.utc) + timedelta(minutes=5):
+            raise ValueError("Время съёмки в будущем")
+        return value.astimezone(timezone.utc) if value else None
 
 
 async def bounded_photo_request(request: Request) -> Request:
@@ -64,6 +81,24 @@ async def read_evidence(request: Request) -> bytes:
             return content
     except (HTTPException, ValidationError, MultipartParseError):
         raise AnalysisError("VALIDATION_ERROR", "Некорректная multipart-загрузка") from None
+
+
+async def read_vision_photo(request: Request) -> tuple[VisionForm, bytes]:
+    bounded = await bounded_photo_request(request)
+    try:
+        async with bounded.form(max_files=1, max_fields=4, max_part_size=64 * 1024) as form:
+            if len(form.multi_items()) != len(form) or not {"equipment_id", "image"}.issubset(form) or set(form) - {"equipment_id", "component_id", "source", "captured_at", "image"}:
+                raise AnalysisError("VALIDATION_ERROR", "Нужны equipment_id, один файл image и допустимые параметры кадра")
+            fields = VisionForm.model_validate({key: value for key, value in form.items() if key != "image"})
+            upload = form["image"]
+            if not isinstance(upload, UploadFile):
+                raise AnalysisError("VALIDATION_ERROR", "Поле image должно содержать файл")
+            content = await upload.read(MAX_IMAGE_BYTES + 1)
+            if len(content) > MAX_IMAGE_BYTES:
+                raise AnalysisError("IMAGE_TOO_LARGE", "Фотография превышает 10 МиБ")
+            return fields, content
+    except (HTTPException, ValidationError, MultipartParseError):
+        raise AnalysisError("VALIDATION_ERROR", "Некорректные параметры фотографии для ИИ") from None
 
 
 PREVIEW_REQUEST_SCHEMA = {

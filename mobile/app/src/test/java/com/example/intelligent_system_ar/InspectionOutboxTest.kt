@@ -39,4 +39,20 @@ class InspectionOutboxTest {
             assertTrue(InspectionOutbox(root,"server-b",1).entries().isEmpty())
         } finally { root.deleteRecursively() }
     }
+
+    @Test fun serverVisionNeedsExplicitSendAndKeepsOriginalFrameAndKey() {
+        val root=Files.createTempDirectory("iv-vision-outbox").toFile()
+        try {
+            val entry=PendingOperation(UUID.randomUUID().toString(),1,componentId=null,vision=true,capturedAt="2026-11-13T10:00:00Z")
+            val queue=InspectionOutbox(root,"local-server",1)
+            queue.enqueue(entry,byteArrayOf(3,2,1))
+            val restored=InspectionOutbox(root,"local-server",1).entries().single()
+            assertEquals(entry,restored)
+            assertFalse(restored.canSend(includeVision=false))
+            assertTrue(restored.canSend(includeVision=true,visionId=entry.id))
+            assertFalse(restored.canSend(includeVision=true,visionId=UUID.randomUUID().toString()))
+            assertNull(restored.componentId)
+            assertArrayEquals(byteArrayOf(3,2,1),queue.photo(restored).readBytes())
+        } finally { root.deleteRecursively() }
+    }
 }

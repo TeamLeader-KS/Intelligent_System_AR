@@ -16,8 +16,13 @@ data class PendingOperation(
     val inspection: DeviceInspectionRequest? = null,
     val componentId: Int? = null,
     val work: ComponentWorkRequest? = null,
-    val inspectionId: Int? = null
-)
+    val inspectionId: Int? = null,
+    val vision: Boolean = false,
+    val capturedAt: String? = null
+) {
+    fun canSend(includeVision: Boolean,visionId: String?=null): Boolean =
+        !vision || includeVision && (visionId==null || id==visionId)
+}
 
 class InspectionOutbox(root: File, server: String, accountId: Int) {
     private val gson = Gson()

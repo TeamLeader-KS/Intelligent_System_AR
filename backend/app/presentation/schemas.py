@@ -82,6 +82,8 @@ class NamedOut(Named):
     id:int
 class EquipmentOut(NewEquipment):
     id:int
+    data_origin: str = "USER"
+    facts: list[dict] = Field(default_factory=list)
 class DefectOut(NewDefect):
     id:int
 
@@ -125,7 +127,7 @@ class InspectionOut(PreviewOut):
     photo_id: int | None
     author_id: int
     workshop_id: int
-    analysis_location: Literal["ANDROID"] | None = None
+    analysis_location: Literal["ANDROID", "LOCAL_SERVER"] | None = None
     model_sha256: str | None = None
     captured_at: datetime | None = None
     component_id: int | None = None
@@ -139,6 +141,8 @@ class InspectionOut(PreviewOut):
     component_resource: dict | None = None
     diagnostic_limitations: str | None = None
     ignored_readings: list[str] | None = None
+    latency_ms: int | None = None
+    limitations: str | None = None
 
 
 class ReviewOut(BaseModel):

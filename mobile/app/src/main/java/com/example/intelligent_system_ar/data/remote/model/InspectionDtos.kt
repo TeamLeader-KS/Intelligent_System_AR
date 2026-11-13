@@ -29,6 +29,25 @@ data class SavedInspectionDto(
     @SerializedName("component_resource") val componentResource: ResourceDto? = null
 )
 data class DiagnosticDto(val code: String,val title: String,val status: String,val recommendation: String)
+data class ServerFindingDto(
+    @SerializedName("component_id") val componentId: Int?,
+    @SerializedName("component_name") val componentName: String?,
+    val code: String,
+    val description: String,
+    val box: List<Float>?,
+    val confidence: Double?
+)
+data class ServerInspectionDto(
+    @SerializedName("inspection_id") val inspectionId: Int,
+    @SerializedName("equipment_id") val equipmentId: Int,
+    @SerializedName("analysis_location") val analysisLocation: String?,
+    @SerializedName("model_version") val modelVersion: String?,
+    val status: String,
+    val defect: String,
+    val reason: String,
+    val recommendation: String,
+    val detections: List<ServerFindingDto>?
+)
 data class ComponentWorkRequest(
     val action: String,
     @SerializedName("occurred_at") val occurredAt: String,

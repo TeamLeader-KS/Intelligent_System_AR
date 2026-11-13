@@ -3,6 +3,7 @@ import {useQuery,useQueryClient} from "@tanstack/react-query";
 import type {Account,Resource,Row} from "../domain/models";
 import {useRepository} from "./context";
 import {Maintenance} from "./maintenance";
+import {PumpGallery} from "./pump-gallery";
 type Field={name:string;label:string;type?:string;options?:{value:string;label:string}[];required?:boolean};
 function DataForm({title,fields,onSave}:{title:string;fields:Field[];onSave:(data:Record<string,string>)=>Promise<void>}) {
  const [error,setError]=useState("");const [busy,setBusy]=useState(false);
@@ -84,12 +85,13 @@ function AndroidDownload() {
  {build.isError&&<button className="secondary" onClick={()=>void build.refetch()}>Повторить</button>}
  <p><a className="button secondary" href="/industrial-vision/cv-example" target="_blank" rel="noreferrer">Пример насоса для камеры ↗</a></p>
  <p><a className="button secondary" href="/industrial-vision/demo-identifiers" target="_blank" rel="noreferrer">QR и шильдик для камеры ↗</a></p>
+ <p><a className="button secondary" href="/industrial-vision/demo-pumps" target="_blank" rel="noreferrer">Галерея разных насосов для камеры ↗</a></p>
  <p>Откройте пример на ноутбуке и наведите на него камеру телефона. Загрузка фотографии в приложение не нужна.</p>
  <p>Скачайте APK на телефон и откройте файл для установки. Телефон и ноутбук должны быть в одной Wi-Fi-сети.</p>
  <p>В приложении нажмите «Найти сервер в Wi-Fi». Модель анализирует живую камеру на телефоне. Результаты CV пока не отправляются в историю автоматически.</p></section>;
 }
 
-export function App() {
+function CabinetApp() {
  const repo=useRepository();
  const me=useQuery({queryKey:["admin"],queryFn:()=>repo.currentAdmin()});
  const [error,setError]=useState("");const [busy,setBusy]=useState(false);const qc=useQueryClient();
@@ -101,4 +103,8 @@ export function App() {
  <label>Логин<input name="login" autoComplete="username" required maxLength={80}/></label><label>Пароль<input name="password" type="password" autoComplete="current-password" required maxLength={256}/></label>
  {error&&<p role="alert" className="error">{error}</p>}<button disabled={busy}>{busy?"Входим…":"Войти"}</button></form></div>}
  </main><footer>Машинное зрение · Осмотр оборудования</footer></>;
+}
+
+export function App() {
+ return window.location.pathname.replace(/\/$/,"")==="/industrial-vision/demo-pumps"?<PumpGallery/>:<CabinetApp/>;
 }

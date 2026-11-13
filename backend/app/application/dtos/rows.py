@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 
 @dataclass(frozen=True)
@@ -33,6 +33,8 @@ class EquipmentRow:
     type_id:int
     passport:str
     serial_number:str|None = None
+    data_origin:str = "USER"
+    facts:list[dict] = field(default_factory=list)
 
 @dataclass(frozen=True)
 class DefectRow:

@@ -23,7 +23,8 @@ from fastapi.exception_handlers import http_exception_handler
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.concurrency import run_in_threadpool
 from app.domain.errors import AnalysisError
-from .uploads import read_photo, read_evidence, PREVIEW_REQUEST_SCHEMA
+from .uploads import read_photo, read_evidence, read_vision_photo, PREVIEW_REQUEST_SCHEMA
+from .demo_gallery import register_demo_gallery
 from .field_schemas import (NewMobileModel, NewDeviceInspection, NewComponent, NewComponentWork,
                             EquipmentDigitalCard, ComponentOut, ComponentWorkOut, WorkHistoryOut,
                             PhotoAttachedOut, DeviceInspectionOut, NewDiagnosticPreview, DiagnosticPreviewOut)
@@ -36,6 +37,9 @@ from .schemas import MobileTokenOut, IdOut, HealthOut
 from .openapi import API_DESCRIPTION, TAGS, configure_openapi
 from app.application.dtos.inspections import ERROR_STATUS
 from app.infrastructure.inspection_export import render_inspection
+from app.infrastructure.source_files import read_source_file
+from .source_schemas import SourceDocumentsOut, ReferenceDatasetsOut, ReferenceRowsOut
+from .browser_origin import local_browser_origin
 from fastapi import Query, Header
 from fastapi.exceptions import RequestValidationError
 from fastapi.exception_handlers import request_validation_exception_handler
@@ -119,7 +123,9 @@ def create_app(url: str | None = None, *, secure: bool | None = None, origin: st
         return response
 
     def csrf(request: Request):
-        if request.headers.get("x-iv-client") != "browser" or request.headers.get("origin") != allowed_origin:
+        origin = request.headers.get("origin")
+        trusted_local = os.getenv("LOCAL_DEMO_ENABLED") == "true" and local_browser_origin(origin, request.headers.get("host"), request.url.scheme)
+        if request.headers.get("x-iv-client") != "browser" or not (origin == allowed_origin or trusted_local):
             raise HTTPException(403, "Недопустимый источник запроса")
 
     def administrator(request: Request, cookie: Annotated[str | None, Security(admin_cookie)]) -> Account:
@@ -154,6 +160,33 @@ def create_app(url: str | None = None, *, secure: bool | None = None, origin: st
         except ValueError:
             raise AnalysisError("VALIDATION_ERROR", "Нужен Idempotency-Key в формате UUID") from None
 
+    @app.get("/api/v1/source-documents", response_model=SourceDocumentsOut)
+    def source_documents(request: Request, user: Member):
+        return request.app.state.services.sources.documents(user)
+
+    @app.get("/api/v1/source-documents/{document_id}/file", response_class=Response,
+             responses={200: {"content": {"application/octet-stream": {"schema": {"type": "string", "format": "binary"}}}}})
+    def source_document_file(document_id: str, request: Request, user: Member):
+        from urllib.parse import quote
+        document = request.app.state.services.sources.document(document_id, user)
+        directory = os.getenv("ORGANIZER_DATA_PATH")
+        if not directory:
+            raise Missing("Хранилище материалов организаторов не подключено")
+        content = read_source_file(Path(directory), document)
+        return Response(content=content, media_type="application/octet-stream", headers={
+            "Content-Disposition": "attachment; filename*=UTF-8''" + quote(document["name"], safe=""),
+            "X-Content-SHA256": document["sha256"],
+        })
+
+    @app.get("/api/v1/reference-datasets", response_model=ReferenceDatasetsOut)
+    def reference_datasets(request: Request, user: Member):
+        return request.app.state.services.sources.datasets(user)
+
+    @app.get("/api/v1/reference-datasets/{dataset_id}", response_model=ReferenceRowsOut)
+    def reference_dataset(dataset_id: str, request: Request, user: Member,
+                          offset: int = Query(0, ge=0), limit: int = Query(100, ge=1, le=100)):
+        return request.app.state.services.sources.dataset(dataset_id, user, offset, limit)
+
     @app.post("/api/v1/mobile-models", response_model=NewMobileModel, status_code=201, dependencies=[Depends(csrf)])
     def register_mobile_model(body: NewMobileModel, request: Request, user: Admin):
         return request.app.state.services.field_service.register_model(body.model_dump(mode="json"), user)
@@ -172,6 +205,27 @@ def create_app(url: str | None = None, *, secure: bool | None = None, origin: st
         content = await read_evidence(request)
         result = await run_in_threadpool(request.app.state.services.field_service.attach_photo, inspection_id, content, user)
         return JSONResponse(result)
+
+    @app.post("/api/v1/inspections/vision", status_code=201, response_model=InspectionOut,
+              openapi_extra={"requestBody": {"required": True, "content": {"multipart/form-data": {"schema": {
+                  "type": "object", "required": ["equipment_id", "image"], "properties": {
+                      "equipment_id": {"type": "integer", "minimum": 1},
+                      "component_id": {"type": "integer", "minimum": 1},
+                      "source": {"type": "string", "enum": ["CAMERA"]},
+                      "captured_at": {"type": "string", "format": "date-time"},
+                      "image": {"type": "string", "format": "binary", "description": "Кадр камеры JPEG/PNG; EXIF нормализуется."}}}}}}})
+    async def server_vision(request: Request, user: Member,
+                            idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None):
+        write_source(request)
+        fields, content = await read_vision_photo(request)
+        result = await run_in_threadpool(request.app.state.services.vision.create,
+                                        values=fields.model_dump(mode="json"), content=content,
+                                        key=repeat_key(idempotency_key), actor=user)
+        return JSONResponse(result.body, status_code=result.status)
+
+    @app.get("/api/v1/vision-status", include_in_schema=False)
+    def vision_status(request: Request, user: Member):
+        return request.app.state.services.vision.status()
 
     @app.get("/api/v1/equipment/resolve", response_model=EquipmentDigitalCard)
     def resolve_qr(request: Request, user: Member, code: Annotated[str, Query(min_length=1, max_length=120)]):
@@ -437,13 +491,14 @@ def create_app(url: str | None = None, *, secure: bool | None = None, origin: st
                 from html import escape
                 image_url = escape((root_path or "") + "/cv-example.png", quote=True)
                 full_url = escape((root_path or "") + "/cv-example-full.png", quote=True)
+                qr_url = escape((root_path or "") + "/demo-qr.svg", quote=True)
                 return HTMLResponse(f'''<!doctype html><html lang="ru"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>Машинное зрение — пример насоса</title>
-<link rel="icon" href="data:,"><style>body{{margin:0;background:#10151a;color:#fff;font:18px system-ui;text-align:center}}main{{padding:16px}}img{{display:block;height:auto;margin:0 auto}}p{{margin:0 0 12px}}.controls{{display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap;margin-bottom:16px}}button{{font:inherit;min-width:44px;padding:8px 14px;border:1px solid #768696;border-radius:8px;background:#273546;color:white;cursor:pointer}}input{{width:min(40vw,300px)}}.image{{overflow:auto}}</style></head>
+<link rel="icon" href="data:,"><style>body{{margin:0;background:#10151a;color:#fff;font:18px system-ui;text-align:center}}main{{padding:16px}}img{{display:block;height:auto;margin:0 auto}}p{{margin:0 0 12px}}.controls{{display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap;margin-bottom:16px}}button{{font:inherit;min-width:44px;padding:8px 14px;border:1px solid #768696;border-radius:8px;background:#273546;color:white;cursor:pointer}}input{{width:min(40vw,300px)}}.image{{overflow:auto}}.scene{{position:relative;display:inline-block;vertical-align:top}}.scene #pump{{width:100%;margin:0}}.plate{{position:absolute;right:2%;bottom:3%;width:68%;box-sizing:border-box;background:#fff;color:#111;padding:12px;box-shadow:0 2px 10px #0009;border:3px solid #343a40;border-radius:6px;text-align:left;display:flex;gap:10px;align-items:center}}.plate[hidden]{{display:none}}.plate-text{{flex:1;min-width:0}}.plate strong{{display:block;font-size:clamp(14px,2.2vw,30px);overflow-wrap:anywhere}}.plate small{{display:block;font-size:clamp(10px,1.4vw,17px)}}.plate img{{width:24%;margin:0;flex:none}}.instructions{{font-size:15px;color:#d1d9e2;max-width:1000px;margin:0 auto 12px}}button[aria-pressed=true]{{background:#365e49}}</style></head>
 <body><main><p>Наведите камеру телефона на насос. Меняйте размер изображения для проверки.</p>
-<div class="controls"><button id="smaller" aria-label="Уменьшить">−</button><input id="scale" type="range" min="25" max="200" step="5" value="100" aria-label="Размер фотографии"><button id="larger" aria-label="Увеличить">+</button><output id="value">100%</output><button id="fit">По размеру экрана</button></div>
-<div class="image"><img id="pump" src="{image_url}" alt="Ржавый насос для проверки живой камерой"></div><p style="font-size:14px;color:#b7c2ce;margin-top:16px">Демонстрационный исходник Qwen из материалов организаторов. <a style="color:#c4dbff" href="{full_url}" target="_blank" rel="noreferrer">Полное изображение</a></p>
-<script>const image=document.getElementById('pump'),scale=document.getElementById('scale'),value=document.getElementById('value');function resize(){{const ratio=image.naturalWidth/image.naturalHeight||1.49;const base=Math.min(innerWidth*.94,innerHeight*.72*ratio,1400);image.style.width=(base*Number(scale.value)/100)+'px';value.textContent=scale.value+'%';}}scale.addEventListener('input',resize);document.getElementById('smaller').onclick=()=>{{scale.value=Number(scale.value)-10;resize();}};document.getElementById('larger').onclick=()=>{{scale.value=Number(scale.value)+10;resize();}};document.getElementById('fit').onclick=()=>{{scale.value=100;resize();}};image.addEventListener('load',resize);addEventListener('resize',resize);resize();</script></main></body></html>''')
+<div class="controls"><button id="smaller" aria-label="Уменьшить">−</button><input id="scale" type="range" min="25" max="200" step="5" value="100" aria-label="Размер фотографии"><button id="larger" aria-label="Увеличить">+</button><output id="value">100%</output><button id="fit">По размеру экрана</button><button id="toggle-plate" aria-pressed="true">Шильдик: показан</button></div><p class="instructions">Сначала считайте QR или нажмите «Считать шильдик» и подтвердите DEMO-PUMP-2026-001. Затем выберите компонент и анализируйте поверхность. Макет таблички добавлен для демо и не является заводским паспортом. При необходимости скройте его кнопкой.</p>
+<div class="image"><div class="scene" id="scene"><img id="pump" src="{image_url}" alt="Ржавый насос для проверки живой камерой"><div class="plate" id="plate"><div class="plate-text"><small>DEMO TEAM · CENTRIFUGAL DEMO</small><small>SERIAL NUMBER</small><strong>DEMO-PUMP-2026-001</strong><small>INVENTORY: pump_demo_001</small><small>DEMO — УЧЕБНЫЙ МАКЕТ</small></div><img src="{qr_url}" alt="QR: pump_demo_001"></div></div></div><p style="font-size:14px;color:#b7c2ce;margin-top:16px">Демонстрационный исходник Qwen из материалов организаторов. <a style="color:#c4dbff" href="{full_url}" target="_blank" rel="noreferrer">Полное изображение</a></p>
+<script>const image=document.getElementById('pump'),scale=document.getElementById('scale'),value=document.getElementById('value');function resize(){{const ratio=image.naturalWidth/image.naturalHeight||1.49;const base=Math.min(innerWidth*.94,innerHeight*.72*ratio,1400);document.getElementById('scene').style.width=(base*Number(scale.value)/100)+'px';value.textContent=scale.value+'%';}}document.getElementById('toggle-plate').onclick=()=>{{const plate=document.getElementById('plate'),button=document.getElementById('toggle-plate');plate.hidden=!plate.hidden;button.setAttribute('aria-pressed',String(!plate.hidden));button.textContent=plate.hidden?'Шильдик: скрыт':'Шильдик: показан';}};scale.addEventListener('input',resize);document.getElementById('smaller').onclick=()=>{{scale.value=Number(scale.value)-10;resize();}};document.getElementById('larger').onclick=()=>{{scale.value=Number(scale.value)+10;resize();}};document.getElementById('fit').onclick=()=>{{scale.value=100;resize();}};image.addEventListener('load',resize);addEventListener('resize',resize);resize();</script></main></body></html>''')
 
             @app.get("/cv-example-full.png", include_in_schema=False)
             def cv_example_full_image():
@@ -499,6 +554,7 @@ def create_app(url: str | None = None, *, secure: bool | None = None, origin: st
                                 filename="intelligent-system-ar-local.apk")
 
     frontend = Path(os.getenv("FRONTEND_DIR", "/app/frontend"))
+    register_demo_gallery(app, root_path, os.getenv("CV_EXAMPLE_PATH"), frontend)
     if frontend.is_dir():
         app.mount("/assets",StaticFiles(directory=frontend/"assets"),name="assets")
         @app.get("/", include_in_schema=False)

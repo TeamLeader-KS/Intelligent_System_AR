@@ -139,6 +139,54 @@ def seed_pump_demo(session_factory, password: str, *, admin_password: str | None
                 "users":users, "note":"Условные параметры и нормативы команды. Контракт модели зарегистрирован; класс 12 неизвестен. Результаты распознавания не сгенерированы. Пароли не выводятся."}
 
 
+def seed_gallery_cards(session_factory, primary_id: int, manifest_path) -> int:
+    """Create separate, explicitly synthetic identities for labelled demo images."""
+    import json
+    import re
+    from pathlib import Path
+    path = Path(manifest_path)
+    if not path.is_file():
+        return 0
+    entries = json.loads(path.read_text())["entries"]
+    if not isinstance(entries, list) or len(entries) > 30:
+        raise ValueError("Некорректный каталог демонстрационных карточек")
+    count = 0
+    with session_factory.begin() as db:
+        primary = db.get(Equipment, primary_id)
+        if primary is None or primary.inventory_number != "pump_demo_001":
+            raise ValueError("Не найден основной демонстрационный насос")
+        identities = set()
+        for entry in entries:
+            inventory, serial = entry.get("inventory_number"), entry.get("serial_number")
+            if inventory is None and serial is None:
+                continue
+            if not isinstance(inventory, str) or not re.fullmatch(r"pump_demo_[0-9]{3}", inventory) or not isinstance(serial, str) or not re.fullmatch(r"DEMO-PUMP-2026-[0-9]{3}", serial) or inventory in identities:
+                raise ValueError("Каталог содержит некорректные демонстрационные идентификаторы")
+            identities.add(inventory)
+            if inventory == primary.inventory_number:
+                continue
+            name = "ДЕМО · " + entry["name"][:145]
+            equipment = db.scalar(select(Equipment).where(Equipment.inventory_number == inventory))
+            if equipment is not None:
+                if equipment.workshop_id != primary.workshop_id or equipment.type_id != primary.type_id or equipment.serial_number != serial or not equipment.name.startswith("ДЕМО · "):
+                    raise ValueError("Идентификатор галереи занят другой карточкой; существующие данные не изменены")
+                continue
+            equipment = Equipment(name=name, inventory_number=inventory, serial_number=serial,
+                                  workshop_id=primary.workshop_id, type_id=primary.type_id,
+                                  passport="Учебная цифровая карточка изображения из демонстрационной галереи. "
+                                  "Шильдик и параметры добавлены командой; это не паспорт изображённого реального агрегата. "
+                                  "Нормы условные. Показания датчиками не измерялись. Источник фото: " + entry["source_url"])
+            db.add(equipment)
+            db.flush()
+            for component_name, model in (("Насос", "Центробежный"), ("Электродвигатель", "Демо"), ("Подшипниковый узел", "Демо")):
+                db.add(EquipmentComponent(equipment_id=equipment.id, name="ДЕМО · " + component_name, model=model,
+                                         specifications=DEMO_SPECIFICATIONS if component_name == "Подшипниковый узел" else [],
+                                         lifetime_hours=16000, operating_hours=3500, service_interval_hours=4000,
+                                         last_service_hours=0))
+            count += 1
+    return count
+
+
 def seed_demo(session_factory, password: str) -> dict:
     import os
     if os.getenv("ANALYSIS_MODE", "disabled") != "mock":

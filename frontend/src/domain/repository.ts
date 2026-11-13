@@ -1,6 +1,7 @@
-import type {Account,Key,Resource,Row,AndroidBuild,EquipmentCard,Page,ComponentWork,ComponentWorkInput,InspectionHistoryItem,DemoScenarios,DiagnosticPreview,SensorReading,VisualCheck} from "./models";
+import type {Account,Key,Resource,Row,AndroidBuild,EquipmentCard,Page,ComponentWork,ComponentWorkInput,InspectionHistoryItem,DemoScenarios,DiagnosticPreview,SensorReading,VisualCheck,DemoPump} from "./models";
 export interface CabinetRepository {
   androidBuild():Promise<AndroidBuild>;
+  demoPumps():Promise<{items:DemoPump[]}>;
   currentAdmin():Promise<Account>;
   login(data:Record<string,FormDataEntryValue>):Promise<Account>;
   logout():Promise<void>;

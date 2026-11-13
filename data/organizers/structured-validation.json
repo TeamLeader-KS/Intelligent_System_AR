@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "structured_revision": 2,
+  "structured_sha256": "b15dff29d364809b1f8bb5e07397b9da360befca00cb21ca9a274102ad17b7ab",
+  "passed": true,
+  "checks": {
+    "source_references": 268,
+    "facts": 195,
+    "xlsx_rows": 1000,
+    "xlsx_cells": 6000,
+    "sha256_verified_originals": 84,
+    "formulas_in_original_workbooks": 0
+  },
+  "equipment_records": 9,
+  "defect_catalog_records": 22,
+  "reference_dataset_count": 2,
+  "errors": [],
+  "limits": [
+    "Проверены структура, ссылки, номера PDF-страниц, оригинальные SHA256 и полное соответствие 1000 строк/6000 ячеек XLSX.",
+    "Числовые факты с VISUALLY_CHECKED сверены на изображениях указанных страниц; TEXT_EXTRACTED и ORGANIZER_COMPILATION не повышены до визуально проверенных.",
+    "Это не подтверждение каждого утверждения во всех 268 страницах. Полный OCR доступен отдельно и сохраняет признак необходимости ручной проверки."
+  ]
+}

@@ -1,8 +1,9 @@
 import type {CabinetRepository} from "../../domain/repository";
-import type {Account,Key,Resource,Row,AndroidBuild,EquipmentCard,Page,ComponentWork,ComponentWorkInput,InspectionHistoryItem,DemoScenarios,DiagnosticPreview,SensorReading,VisualCheck} from "../../domain/models";
+import type {Account,Key,Resource,Row,AndroidBuild,EquipmentCard,Page,ComponentWork,ComponentWorkInput,InspectionHistoryItem,DemoScenarios,DiagnosticPreview,SensorReading,VisualCheck,DemoPump} from "../../domain/models";
 import {api} from "../http";
 export class HttpCabinetRepository implements CabinetRepository {
   androidBuild(){return api<AndroidBuild>("android-build");}
+  demoPumps(){return api<{items:DemoPump[]}>("demo-pumps");}
   currentAdmin(){return api<Account>("auth/me");}
   login(data:Record<string,FormDataEntryValue>){return api<Account>("auth/login","POST",data);}
   logout(){return api<void>("auth/logout","POST");}
