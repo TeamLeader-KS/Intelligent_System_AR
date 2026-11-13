@@ -1,6 +1,6 @@
 from sqlalchemy import select, func
 import pytest
-from test_access import client, PASSWORD
+from test_access import client, PASSWORD, HEADERS
 from test_reports import factory
 from app.infrastructure.demo import seed_pump_demo
 from app.infrastructure.models import EquipmentComponent, Inspection, User
@@ -36,3 +36,19 @@ def test_pump_demo_offline_contract_and_repeated_seed(client, factory, monkeypat
     seed_pump_demo(factory, PASSWORD)
     with factory() as db:
         assert db.scalar(select(EquipmentComponent).order_by(EquipmentComponent.id)).operating_hours == 3600
+
+
+def test_local_bootstrap_admin_is_repeatable_and_does_not_reset_accounts(client, factory):
+    admin_password = "Local-Demo-Admin-Password-2026!"
+    first = seed_pump_demo(factory, PASSWORD, admin_password=admin_password)
+    assert seed_pump_demo(factory, PASSWORD, admin_password=admin_password) == first
+    login = client.post("/api/v1/auth/login", json={"login":"demo_admin", "password":admin_password}, headers=HEADERS)
+    assert login.status_code == 200 and login.json()["role"] == "ADMIN"
+    assert client.get("/api/v1/users").status_code == 200
+    with factory() as db:
+        previous_hash = db.scalar(select(User.password_hash).where(User.login == "demo_admin"))
+    with pytest.raises(ValueError, match="demo_admin"):
+        seed_pump_demo(factory, PASSWORD, admin_password=admin_password + "different")
+    with factory() as db:
+        assert db.scalar(select(User.password_hash).where(User.login == "demo_admin")) == previous_hash
+        assert db.scalar(select(func.count()).select_from(EquipmentComponent)) == 3

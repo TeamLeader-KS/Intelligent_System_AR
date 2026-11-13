@@ -59,6 +59,11 @@ class HealthOut(BaseModel):
     status: Literal["ok"]
 
 
+class AndroidBuildOut(BaseModel):
+    state: Literal["MISSING", "BUILDING", "READY", "ERROR"]
+    message: str
+
+
 class UserOut(AccountOut):
     active:bool
 class KeyOut(BaseModel):

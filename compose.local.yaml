@@ -20,6 +20,8 @@ services:
       PHOTO_ROOT: /app/photos
       # Only the LAN installation exposes the locally built debug APK.
       ANDROID_APK_PATH: /app/downloads/app-debug.apk
+      # Explicit opt-in to CLI-only synthetic accounts/equipment on the LAN demo.
+      LOCAL_DEMO_ENABLED: "true"
     ports:
       # Defaults to this computer only; explicitly choose its LAN address for phones.
       - "${IV_LOCAL_BIND:-127.0.0.1}:8001:8000"

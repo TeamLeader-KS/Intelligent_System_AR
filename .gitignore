@@ -39,3 +39,5 @@ private.env
 
 # Local development photo storage
 var/photos/
+# Lock owned by the local launcher; credentials are in ignored .env.local.
+.iv-local-lock/

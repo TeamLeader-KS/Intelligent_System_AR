@@ -2,3 +2,4 @@ export type Account = {id:number;login:string;full_name:string;role:string;works
 export type Key = {id:number;name:string;prefix:string;created_at:string;expires_at:string;revoked:boolean};
 export type Row=Record<string,string|number|boolean|null>;
 export type Resource="users"|"workshops"|"equipment-types"|"equipment"|"defect-types";
+export type AndroidBuild={state:"MISSING"|"BUILDING"|"READY"|"ERROR";message:string};

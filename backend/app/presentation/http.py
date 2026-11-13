@@ -28,6 +28,7 @@ from .field_schemas import (NewMobileModel, NewDeviceInspection, NewComponent, N
                             EquipmentDigitalCard, ComponentOut, ComponentWorkOut, WorkHistoryOut,
                             PhotoAttachedOut, DeviceInspectionOut)
 from .schemas import PreviewOut
+from .schemas import AndroidBuildOut
 from .schemas import InspectionOut, HistoryOut
 from .schemas import NewReport, ReportOut, NotificationOut, NotificationsOut, NotificationUpdate
 from .schemas import NewReview, ReviewOut, ReviewsOut, CloseIssue, IssueOut, InspectionDetailOut
@@ -381,12 +382,41 @@ def create_app(url: str | None = None, *, secure: bool | None = None, origin: st
 
     apk_path = os.getenv("ANDROID_APK_PATH")
     if apk_path:
+        def android_build_state():
+            import json
+            state_file = Path(apk_path).with_name("build-status.json")
+            try:
+                with state_file.open() as file:
+                    data = file.read(2049)
+                saved = json.loads(data) if len(data) <= 2048 else None
+                state = saved.get("state") if isinstance(saved, dict) else "ERROR"
+                if not isinstance(state, str) or state not in ("MISSING", "BUILDING", "READY", "ERROR"):
+                    state = "ERROR"
+            except FileNotFoundError:
+                state = "READY" if Path(apk_path).is_file() else "MISSING"
+            except (OSError, json.JSONDecodeError):
+                state = "ERROR"
+            if state == "READY" and not Path(apk_path).is_file():
+                state = "MISSING"
+            messages = {"MISSING":"APK пока не собран. Запустите локальный проект.",
+                        "BUILDING":"APK собирается. Сайт и сервер уже доступны.",
+                        "READY":"APK готов к установке.",
+                        "ERROR":"Сборка APK не завершена. Посмотрите терминал запуска и повторите команду."}
+            return {"state":state, "message":messages[state]}
+
+        @app.get("/api/v1/android-build", response_model=AndroidBuildOut, include_in_schema=False)
+        def android_build_status():
+            return android_build_state()
+
         @app.get("/mobile-server", include_in_schema=False)
         def mobile_server_identity():
             return {"service":"industrial-vision", "api_path":(root_path or "") + "/api/v1/"}
 
         @app.get("/android.apk", include_in_schema=False)
         def android_download():
+            state = android_build_state()
+            if state["state"] in ("BUILDING", "ERROR"):
+                raise HTTPException(503, state["message"], headers={"Retry-After":"5"})
             if not Path(apk_path).is_file():
                 raise HTTPException(404, "APK ещё не собран")
             return FileResponse(apk_path, media_type="application/vnd.android.package-archive",

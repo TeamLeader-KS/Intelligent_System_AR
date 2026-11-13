@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -22,6 +23,90 @@ func TestDiscoveryReplyRequiresProtocolAndNonce(t *testing.T) {
 	}
 	if reply["nonce"] != nonce || reply["api_url"] != url || reply["service"] != "industrial-vision" {
 		t.Fatal(reply)
+	}
+}
+
+func TestLegacyEnvAddsOnlyMissingSecrets(t *testing.T) {
+	path := filepath.Join(t.TempDir(), ".env.local")
+	original := "IV_LOCAL_DB_PASSWORD=original-db-password\nIV_LOCAL_ADMIN_PASSWORD=original-db-admin\nIV_DEMO_PASSWORD=original-employee-password\n# keep this comment\n"
+	if err := os.WriteFile(path, []byte(original), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := prepareLocalEnv(path); err != nil {
+		t.Fatal(err)
+	}
+	updated, _ := os.ReadFile(path)
+	if !bytes.HasPrefix(updated, []byte(original)) {
+		t.Fatal("existing configuration changed")
+	}
+	values, err := readLocalEnv(path)
+	if err != nil || len(values["IV_DEMO_ADMIN_PASSWORD"]) != 48 {
+		t.Fatal("admin secret not generated", err)
+	}
+	if err := prepareLocalEnv(path); err != nil {
+		t.Fatal(err)
+	}
+	again, _ := os.ReadFile(path)
+	if !bytes.Equal(updated, again) {
+		t.Fatal("restart changed credentials")
+	}
+}
+
+func TestMobileFingerprintIgnoresBuildOutputButTracksSources(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "build.gradle.kts"), []byte("source v1"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	first, err := mobileFingerprint(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(filepath.Join(root, "build"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "build", "generated.kt"), []byte("generated"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "local.properties"), []byte("sdk.dir=local"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	same, _ := mobileFingerprint(root)
+	if first != same {
+		t.Fatal("generated output changed fingerprint")
+	}
+	if err := os.WriteFile(filepath.Join(root, "build.gradle.kts"), []byte("source v2"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	changed, _ := mobileFingerprint(root)
+	if first == changed {
+		t.Fatal("source changes were ignored")
+	}
+}
+
+func TestAPKCacheRequiresMatchingSourcesAndFileHash(t *testing.T) {
+	directory := t.TempDir()
+	apk := filepath.Join(directory, "app-debug.apk")
+	if err := os.WriteFile(apk, []byte("artifact"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	hash, err := fileSHA(apk)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := writeJSON(filepath.Join(directory, "build-manifest.json"), apkManifest{"sources-v1", hash}); err != nil {
+		t.Fatal(err)
+	}
+	if !cachedAPK(directory, "sources-v1") {
+		t.Fatal("valid artifact not reused")
+	}
+	if cachedAPK(directory, "sources-v2") {
+		t.Fatal("stale sources accepted")
+	}
+	if err := os.WriteFile(apk, []byte("corrupt"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if cachedAPK(directory, "sources-v1") {
+		t.Fatal("modified artifact accepted")
 	}
 }
 

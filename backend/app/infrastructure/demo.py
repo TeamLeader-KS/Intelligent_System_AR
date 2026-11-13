@@ -17,10 +17,12 @@ DEMO_USERS = (("demo_worker", "ДЕМО · Рабочий", "WORKER", 1),
               ("demo_foreign", "ДЕМО · Другой цех", "WORKER", 2))
 
 
-def seed_pump_demo(session_factory, password: str) -> dict:
+def seed_pump_demo(session_factory, password: str, *, admin_password: str | None = None) -> dict:
     """Synthetic equipment cards for the real LAN API; no model or inspections fabricated."""
     if not 12 <= len(password) <= 256:
         raise ValueError("Демонстрационный пароль: 12–256 символов")
+    if admin_password is not None and not 12 <= len(admin_password) <= 256:
+        raise ValueError("Пароль демоадминистратора: 12–256 символов")
     passwords = Passwords()
     accounts = (("pump_worker", "ДЕМО · Оператор насоса", "WORKER"),
                 ("pump_engineer", "ДЕМО · Инженер насоса", "ENGINEER"))
@@ -58,6 +60,16 @@ def seed_pump_demo(session_factory, password: str) -> dict:
             elif (user.full_name, user.role, user.workshop_id, user.active) != (name, role, shop.id, True) or not passwords.verify(password, user.password_hash):
                 raise ValueError("Демонстрационный логин занят или пароль не совпадает; данные не изменены")
             users[login] = user.id
+        if admin_password is not None:
+            admin = db.scalar(select(User).where(User.login == "demo_admin"))
+            if admin is None:
+                admin = User(login="demo_admin", full_name="ДЕМО · Администратор", role="ADMIN",
+                             workshop_id=None, active=True, password_hash=passwords.hash(admin_password))
+                db.add(admin)
+                db.flush()
+            elif (admin.full_name, admin.role, admin.workshop_id, admin.active) != ("ДЕМО · Администратор", "ADMIN", None, True) or not passwords.verify(admin_password, admin.password_hash):
+                raise ValueError("Логин demo_admin занят или пароль не совпадает; данные не изменены")
+            users["demo_admin"] = admin.id
         components = (("ДЕМО · Насос", "Центробежный", [
             {"name":"ДЕМО · Подача", "value":135, "unit":"м³/ч"},
             {"name":"ДЕМО · Напор", "value":80, "unit":"м"}]),

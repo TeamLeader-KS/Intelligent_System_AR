@@ -73,15 +73,23 @@ function Cabinet({user,onLogout}:{user:Account;onLogout:()=>Promise<void>}) {
  {tab==="Телефон"&&<Phone/>}</>;
 }
 
+function AndroidDownload() {
+ const repo=useRepository();
+ const build=useQuery({queryKey:["android-build"],queryFn:()=>repo.androidBuild(),refetchInterval:2000});
+ return <section className="panel"><h2>Приложение Android</h2>
+ <p role="status" aria-live="polite">{build.isPending?"Проверяем готовность APK…":build.isError?"Не удалось проверить сборку APK.":build.data.message}</p>
+ {build.data?.state==="READY"&&<a className="button" href={import.meta.env.VITE_ANDROID_APK_URL} download>Скачать APK</a>}
+ {build.isError&&<button className="secondary" onClick={()=>void build.refetch()}>Повторить</button>}
+ <p>Скачайте APK на телефон и откройте файл для установки. Телефон и ноутбук должны быть в одной Wi-Fi-сети.</p>
+ <p>В приложении нажмите «Найти сервер в Wi-Fi». Тестовая сборка: вход, карточки и история; распознавание моделью пока не подключено.</p></section>;
+}
+
 export function App() {
  const repo=useRepository();
  const me=useQuery({queryKey:["admin"],queryFn:()=>repo.currentAdmin()});
  const [error,setError]=useState("");const [busy,setBusy]=useState(false);const qc=useQueryClient();
  return <><header><a href="https://pet.oppennec.ru/">oppennec <small>LAB</small></a><a href="https://pet.oppennec.ru/">Все пет-проекты ↗</a></header><main>
- {import.meta.env.VITE_ANDROID_APK_URL&&<section className="panel"><h2>Приложение Android</h2>
- <p>Скачайте APK на телефон и откройте файл для установки. Телефон и ноутбук должны быть в одной Wi-Fi-сети.</p>
- <a className="button" href={import.meta.env.VITE_ANDROID_APK_URL} download>Скачать APK</a>
- <p>В приложении нажмите «Найти сервер в Wi-Fi». Тестовая сборка: вход, карточки и история; распознавание моделью пока не подключено.</p></section>}
+ {import.meta.env.VITE_ANDROID_APK_URL&&<AndroidDownload/>}
  {me.isPending?<p role="status">Проверяем авторизацию…</p>:me.data?<Cabinet user={me.data} onLogout={async()=>{await repo.logout();qc.clear();window.location.reload();}}/>:
  <div className="login"><span className="eyebrow">INDUSTRIAL VISION / ШАГ 2</span><h1>Вход администратора<span>.</span></h1><p>Кабинет, API-ключи и схема сервера доступны только администратору. Аккаунты сотрудников предназначены для Android-приложения.</p>
  <form className="panel" onSubmit={async e=>{e.preventDefault();const form=e.currentTarget;const data=Object.fromEntries(new FormData(form));setBusy(true);setError("");try{const user=await repo.login(data);form.reset();qc.setQueryData(["admin"],user);}catch(err){setError(err instanceof Error?err.message:"Не удалось войти");}finally{setBusy(false);}}}>

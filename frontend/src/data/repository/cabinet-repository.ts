@@ -1,7 +1,8 @@
 import type {CabinetRepository} from "../../domain/repository";
-import type {Account,Key,Resource,Row} from "../../domain/models";
+import type {Account,Key,Resource,Row,AndroidBuild} from "../../domain/models";
 import {api} from "../http";
 export class HttpCabinetRepository implements CabinetRepository {
+  androidBuild(){return api<AndroidBuild>("android-build");}
   currentAdmin(){return api<Account>("auth/me");}
   login(data:Record<string,FormDataEntryValue>){return api<Account>("auth/login","POST",data);}
   logout(){return api<void>("auth/logout","POST");}
