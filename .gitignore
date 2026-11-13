@@ -37,3 +37,14 @@ local.properties
 .idea/
 *.iml
 .navigation/
+
+.venv/
+__pycache__/
+*.pyc
+runs/
+dataset/
+*.pt
+*.tflite
+*.onnx
+models/
+dummy_input.npy

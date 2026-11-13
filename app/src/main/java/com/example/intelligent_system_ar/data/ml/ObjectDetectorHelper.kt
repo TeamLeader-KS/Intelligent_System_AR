@@ -1,4 +1,4 @@
-package com.example.intelligent_system_ar.utils
+package com.example.intelligent_system_ar.data.ml
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -10,11 +10,6 @@ import java.io.InputStreamReader
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-data class Detection(
-    val boundingBox: RectF, // Координаты [0..1] относительно картинки
-    val label: String,
-    val confidence: Float
-)
 
 class ObjectDetectorHelper(context: Context) {
     private var interpreter: Interpreter
@@ -22,14 +17,10 @@ class ObjectDetectorHelper(context: Context) {
     private val inputSize = 640
 
     init {
-        // Загружаем модель из assets
         val model = FileUtil.loadMappedFile(context, "best_float16.tflite")
-        val options = Interpreter.Options().apply {
-            setNumThreads(4)
-        }
+        val options = Interpreter.Options().apply { setNumThreads(4) }
         interpreter = Interpreter(model, options)
 
-        // Загружаем классы из labels.txt
         val labelStream = context.assets.open("labels.txt")
         labels = BufferedReader(InputStreamReader(labelStream)).use { reader ->
             reader.readLines()
@@ -37,18 +28,21 @@ class ObjectDetectorHelper(context: Context) {
     }
 
     fun detect(image: Bitmap): List<Detection> {
-        // 1. Подготавливаем картинку (640x640)
+        // 1. Масштабируем под 640x640
         val resizedBitmap = Bitmap.createScaledBitmap(image, inputSize, inputSize, true)
         val inputBuffer = convertBitmapToByteBuffer(resizedBitmap)
 
-        // 2. Формат вывода YOLOv8: [1, 4 + num_classes, 8400]
+        // 2. Получаем форму выхода (YOLOv8: [1, 4 + num_classes, 8400])
         val outputShape = interpreter.getOutputTensor(0).shape()
-        val outputArray = Array(outputShape[0]) { Array(outputShape[1]) { FloatArray(outputShape[2]) } }
+        val outputArray = Array(outputShape[0]) {
+            Array(outputShape[1]) {
+                FloatArray(outputShape[2])
+            }
+        }
 
-        // 3. Запускаем модель
         interpreter.run(inputBuffer, outputArray)
 
-        // 4. Парсим результаты (Упрощенный парсер для YOLOv8)
+        // 3. Парсим результаты
         val detections = mutableListOf<Detection>()
         val numClasses = labels.size
         val rows = outputShape[2] // 8400 боксов
@@ -58,7 +52,6 @@ class ObjectDetectorHelper(context: Context) {
             var maxClassScore = 0f
             var classId = -1
 
-            // Ищем класс с максимальной уверенностью
             for (c in 0 until numClasses) {
                 val score = outputArray[0][4 + c][i]
                 if (score > maxClassScore) {
@@ -69,19 +62,21 @@ class ObjectDetectorHelper(context: Context) {
 
             // Если уверенность > 0.4
             if (maxClassScore > 0.4f && classId != -1) {
-                // Координаты YOLOv8 (cx, cy, w, h) нормализованы от 0 до 1
+                // Координаты YOLO (cx, cy, w, h) в пикселях
                 val cx = outputArray[0][0][i]
                 val cy = outputArray[0][1][i]
                 val w = outputArray[0][2][i]
                 val h = outputArray[0][3][i]
 
-                // Переводим в формат (left, top, right, bottom)
-                val left = cx - w / 2
-                val top = cy - h / 2
-                val right = cx + w / 2
-                val bottom = cy + h / 2
+                // Переводим в нормализованные (0..1) и RectF(left, top, right, bottom)
+                val left = (cx - w / 2) / inputSize
+                val top = (cy - h / 2) / inputSize
+                val right = (cx + w / 2) / inputSize
+                val bottom = (cy + h / 2) / inputSize
 
-                // Если это "Без коррозии" (ID=5), можем не рисовать рамку или рисовать зеленую
+                // Проверка на выход за границы
+                if (left < 0f || top < 0f || right > 1f || bottom > 1f) continue
+
                 val labelName = labels.getOrElse(classId) { "Дефект поверхности" }
 
                 detections.add(
@@ -93,7 +88,9 @@ class ObjectDetectorHelper(context: Context) {
                 )
             }
         }
-        return detections
+
+        // Сортируем по уверенности (сначала самые точные)
+        return detections.sortedByDescending { it.confidence }.take(10)
     }
 
     private fun convertBitmapToByteBuffer(bitmap: Bitmap): ByteBuffer {
@@ -106,10 +103,10 @@ class ObjectDetectorHelper(context: Context) {
         for (i in 0 until inputSize) {
             for (j in 0 until inputSize) {
                 val `val` = intValues[pixel++]
-                // Нормализация (0..255) -> (0..1)
-                byteBuffer.putFloat(((`val` shr 16 and 0xFF) - 127.5f) / 127.5f)
-                byteBuffer.putFloat(((`val` shr 8 and 0xFF) - 127.5f) / 127.5f)
-                byteBuffer.putFloat(((`val` and 0xFF) - 127.5f) / 127.5f)
+                // ВАЖНО: Нормализация 0..1 (а не -1..1!)
+                byteBuffer.putFloat((( `val` shr 16 and 0xFF) / 255.0f))
+                byteBuffer.putFloat((( `val` shr 8 and 0xFF) / 255.0f))
+                byteBuffer.putFloat((( `val` and 0xFF) / 255.0f))
             }
         }
         return byteBuffer
