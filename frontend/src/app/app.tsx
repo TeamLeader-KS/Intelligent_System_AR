@@ -42,8 +42,8 @@ function Keys() {
  <button onClick={()=>void navigator.clipboard.writeText(secret)}>Копировать</button><button className="secondary" onClick={()=>setSecret("")}>Скрыть</button></div></section>}</>;
 }
 
-function Phone() {return <section className="panel"><h2>Подключение Android-приложения</h2><p>Телефону достаточно интернета. Tailscale и домашняя Wi-Fi-сеть не нужны.</p>
- <h3>Адрес сервера</h3><code>https://pet.oppennec.ru/industrial-vision/api/v1</code>
+function Phone() {return <section className="panel"><h2>Подключение Android-приложения</h2><p>Телефон подключается к локальному серверу по Wi-Fi. Приложение автоматически ищет сервер в сети.</p>
+ <h3>Адрес сервера</h3><code>{window.location.origin + "/industrial-vision/api/v1/"}</code>
  <h3>Вход сотрудника</h3><p>Администратор создаёт пользователя и назначает цех. Приложение получает токен запросом:</p>
  <pre>{'POST /auth/token\nContent-Type: application/json\n\n{"login":"логин сотрудника","password":"его пароль"}'}</pre>
  <p>Из ответа взять access_token. Он действует 8 часов; после истечения нужно войти снова.</p>
@@ -51,7 +51,7 @@ function Phone() {return <section className="panel"><h2>Подключение A
  <p>Обычный пользователь получает данные своего цеха. Он не имеет доступа к веб-кабинету, ключам и Swagger. Для серверных интеграций администратор может использовать свой API-ключ в том же заголовке Bearer.</p>
  <h3>Пример Java</h3><pre>{'// Выполнять в фоновом потоке\nURL url = new URL(BASE_URL + "/equipment");\nHttpURLConnection c = (HttpURLConnection) url.openConnection();\nc.setConnectTimeout(10000);\nc.setReadTimeout(10000);\nc.setRequestProperty("Authorization", "Bearer " + token);\nint status = c.getResponseCode();\n// 401: войти повторно; 403: нет разрешения'}</pre>
  <p>В AndroidManifest.xml требуется разрешение android.permission.INTERNET. Проверку HTTPS-сертификата отключать не нужно. Пароли и токены не записывать в логи и исходники APK; токен хранить с защитой Android Keystore.</p>
- <p>На втором шаге доступны профиль и справочники. Приём фотографий и анализ ещё не реализованы.</p></section>;}
+ <p>Доступны профиль, карточки оборудования и история осмотров. Распознавание камерой пока не включено.</p></section>;}
 
 function Cabinet({user,onLogout}:{user:Account;onLogout:()=>Promise<void>}) {
  const repo=useRepository();
@@ -60,7 +60,7 @@ function Cabinet({user,onLogout}:{user:Account;onLogout:()=>Promise<void>}) {
  const types=useQuery({queryKey:["equipment-types"],queryFn:()=>repo.list("equipment-types")});
  const opts=(rows:Row[]|undefined)=>[{value:"",label:"Выберите…" },...(rows||[]).map(r=>({value:String(r.id),label:String(r.name)}))];
  const tabs=["Ключи","Пользователи","Цеха","Типы оборудования","Оборудование","Неисправности","Телефон"];
- return <><div className="heading"><div><span className="eyebrow">КАБИНЕТ АДМИНИСТРАТОРА</span><h1>Industrial Vision<span>.</span></h1><p>{user.full_name} · {user.login}</p></div><div className="actions">
+ return <><div className="heading"><div><span className="eyebrow">КАБИНЕТ АДМИНИСТРАТОРА</span><h1>Машинное зрение<span>.</span></h1><p>{user.full_name} · {user.login}</p></div><div className="actions">
  <a className="button secondary" href="/industrial-vision/docs">Swagger ↗</a><a className="button secondary" href="/industrial-vision/openapi.json">Схема API ↗</a>
  <button className="secondary" onClick={()=>void onLogout().catch(e=>setError(String(e)))}>Выйти</button></div></div>
  {error&&<p role="alert">{error}</p>}<nav aria-label="Разделы кабинета">{tabs.map(t=><button className={tab===t?"":"secondary"} key={t} onClick={()=>setTab(t)}>{t}</button>)}</nav>
@@ -88,12 +88,12 @@ export function App() {
  const repo=useRepository();
  const me=useQuery({queryKey:["admin"],queryFn:()=>repo.currentAdmin()});
  const [error,setError]=useState("");const [busy,setBusy]=useState(false);const qc=useQueryClient();
- return <><header><a href="https://pet.oppennec.ru/">oppennec <small>LAB</small></a><a href="https://pet.oppennec.ru/">Все пет-проекты ↗</a></header><main>
+ return <><header><a href="/industrial-vision/">Машинное зрение</a></header><main>
  {import.meta.env.VITE_ANDROID_APK_URL&&<AndroidDownload/>}
  {me.isPending?<p role="status">Проверяем авторизацию…</p>:me.data?<Cabinet user={me.data} onLogout={async()=>{await repo.logout();qc.clear();window.location.reload();}}/>:
- <div className="login"><span className="eyebrow">INDUSTRIAL VISION / ШАГ 2</span><h1>Вход администратора<span>.</span></h1><p>Кабинет, API-ключи и схема сервера доступны только администратору. Аккаунты сотрудников предназначены для Android-приложения.</p>
+ <div className="login"><span className="eyebrow">МАШИННОЕ ЗРЕНИЕ</span><h1>Вход администратора<span>.</span></h1><p>Кабинет, API-ключи и схема сервера доступны только администратору. Аккаунты сотрудников предназначены для Android-приложения.</p>
  <form className="panel" onSubmit={async e=>{e.preventDefault();const form=e.currentTarget;const data=Object.fromEntries(new FormData(form));setBusy(true);setError("");try{const user=await repo.login(data);form.reset();qc.setQueryData(["admin"],user);}catch(err){setError(err instanceof Error?err.message:"Не удалось войти");}finally{setBusy(false);}}}>
  <label>Логин<input name="login" autoComplete="username" required maxLength={80}/></label><label>Пароль<input name="password" type="password" autoComplete="current-password" required maxLength={256}/></label>
  {error&&<p role="alert" className="error">{error}</p>}<button disabled={busy}>{busy?"Входим…":"Войти"}</button></form></div>}
- </main><footer>Industrial Vision · FastAPI / PostgreSQL / uv</footer></>;
+ </main><footer>Машинное зрение · Осмотр оборудования</footer></>;
 }

@@ -41,3 +41,14 @@ private.env
 var/photos/
 # Lock owned by the local launcher; credentials are in ignored .env.local.
 .iv-local-lock/
+
+# Local machine-learning artifacts
+*.iml
+.navigation/
+runs/
+dataset/
+*.pt
+*.tflite
+*.onnx
+models/
+dummy_input.npy
