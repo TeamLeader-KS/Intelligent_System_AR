@@ -388,13 +388,21 @@ def create_app(url: str | None = None, *, secure: bool | None = None, origin: st
             def cv_example_page():
                 from html import escape
                 image_url = escape((root_path or "") + "/cv-example.png", quote=True)
+                full_url = escape((root_path or "") + "/cv-example-full.png", quote=True)
                 return HTMLResponse(f'''<!doctype html><html lang="ru"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>Машинное зрение — пример насоса</title>
 <link rel="icon" href="data:,"><style>body{{margin:0;background:#10151a;color:#fff;font:18px system-ui;text-align:center}}main{{padding:16px}}img{{display:block;height:auto;margin:0 auto}}p{{margin:0 0 12px}}.controls{{display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap;margin-bottom:16px}}button{{font:inherit;min-width:44px;padding:8px 14px;border:1px solid #768696;border-radius:8px;background:#273546;color:white;cursor:pointer}}input{{width:min(40vw,300px)}}.image{{overflow:auto}}</style></head>
 <body><main><p>Наведите камеру телефона на насос. Меняйте размер изображения для проверки.</p>
 <div class="controls"><button id="smaller" aria-label="Уменьшить">−</button><input id="scale" type="range" min="25" max="200" step="5" value="100" aria-label="Размер фотографии"><button id="larger" aria-label="Увеличить">+</button><output id="value">100%</output><button id="fit">По размеру экрана</button></div>
-<div class="image"><img id="pump" src="{image_url}" alt="Ржавый насос для проверки живой камерой"></div>
+<div class="image"><img id="pump" src="{image_url}" alt="Ржавый насос для проверки живой камерой"></div><p style="font-size:14px;color:#b7c2ce;margin-top:16px">Демонстрационный исходник Qwen из материалов организаторов. <a style="color:#c4dbff" href="{full_url}" target="_blank" rel="noreferrer">Полное изображение</a></p>
 <script>const image=document.getElementById('pump'),scale=document.getElementById('scale'),value=document.getElementById('value');function resize(){{const ratio=image.naturalWidth/image.naturalHeight||1.49;const base=Math.min(innerWidth*.94,innerHeight*.72*ratio,1400);image.style.width=(base*Number(scale.value)/100)+'px';value.textContent=scale.value+'%';}}scale.addEventListener('input',resize);document.getElementById('smaller').onclick=()=>{{scale.value=Number(scale.value)-10;resize();}};document.getElementById('larger').onclick=()=>{{scale.value=Number(scale.value)+10;resize();}};document.getElementById('fit').onclick=()=>{{scale.value=100;resize();}};image.addEventListener('load',resize);addEventListener('resize',resize);resize();</script></main></body></html>''')
+
+            @app.get("/cv-example-full.png", include_in_schema=False)
+            def cv_example_full_image():
+                full_path = Path(cv_example).with_name("rust-pump-full.png")
+                if not full_path.is_file():
+                    raise HTTPException(404, "Полный пример не найден")
+                return FileResponse(full_path, media_type="image/png")
 
             @app.get("/cv-example.png", include_in_schema=False)
             def cv_example_image():
