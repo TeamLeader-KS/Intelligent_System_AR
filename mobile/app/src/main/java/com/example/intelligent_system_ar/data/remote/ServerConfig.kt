@@ -3,7 +3,11 @@ package com.example.intelligent_system_ar.data.remote
 import okhttp3.HttpUrl
 
 object ServerConfig {
-    const val DEFAULT_URL = "http://10.0.2.2:8001/industrial-vision/api/v1/"
+    /** Основной сервер в интернете (HTTPS). Телефону достаточно мобильного интернета или любого Wi-Fi. */
+    const val DEFAULT_URL = "https://pet.oppennec.ru/industrial-vision/api/v1/"
+
+    /** Эмулятор Android Studio: 10.0.2.2 — это «localhost» компьютера. На реальном телефоне не работает. */
+    const val EMULATOR_URL = "http://10.0.2.2:8001/industrial-vision/api/v1/"
 
     fun normalize(value: String): String {
         val url = HttpUrl.parse(value.trim())

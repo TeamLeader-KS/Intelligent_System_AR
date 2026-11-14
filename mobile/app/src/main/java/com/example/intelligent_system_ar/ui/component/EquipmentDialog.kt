@@ -33,10 +33,10 @@ fun EquipmentDialog(viewModel: MainViewModel, onDismiss: () -> Unit) {
                 }
                 viewModel.equipmentError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 viewModel.cardError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-                if (viewModel.equipment.isEmpty() && !viewModel.isLoadingEquipment && viewModel.equipmentError == null) {
-                    Text("В вашем цехе пока нет оборудования")
+                if (viewModel.visibleEquipment.isEmpty() && !viewModel.isLoadingEquipment && viewModel.equipmentError == null) {
+                    Text("В выбранном цехе пока нет оборудования")
                 }
-                viewModel.equipment.forEach { equipment ->
+                viewModel.visibleEquipment.forEach { equipment ->
                     OutlinedButton(onClick = { viewModel.selectEquipment(equipment.id) },
                         modifier = Modifier.fillMaxWidth()) {
                         Text("${equipment.name} · ${equipment.inventoryNumber}")

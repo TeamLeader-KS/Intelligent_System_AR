@@ -7,10 +7,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.intelligent_system_ar.data.local.Employee
 import com.example.intelligent_system_ar.data.model.UserState
+import com.example.intelligent_system_ar.data.model.Workshop
+import com.example.intelligent_system_ar.data.model.roleTitle
 import com.example.intelligent_system_ar.data.auth.TokenStore
 import com.example.intelligent_system_ar.data.repository.AuthRepository
+import com.example.intelligent_system_ar.data.repository.DirectoryRepository
 import com.example.intelligent_system_ar.data.repository.LoginException
+import com.example.intelligent_system_ar.data.repository.MockDirectoryRepository
+import com.example.intelligent_system_ar.data.repository.ServerDirectoryRepository
+import com.example.intelligent_system_ar.data.repository.StaffSource
 import com.example.intelligent_system_ar.data.remote.ApiClient
 import com.example.intelligent_system_ar.data.remote.DirectoryApi
 import com.example.intelligent_system_ar.data.remote.ServerConfig
@@ -26,7 +33,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val tokenStore = TokenStore(app)
     var serverUrl by mutableStateOf(prefs.getString("server_url", ServerConfig.DEFAULT_URL)!!)
         private set
-    private var api = ApiClient.create(serverUrl)
+    private var api = ApiClient.create(serverUrl, app)
 
     var accessToken by mutableStateOf<String?>(null)
         private set
@@ -62,6 +69,16 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private var cardJob: Job? = null
     private var historyJob: Job? = null
 
+    // Откуда берутся цеха / должности / сотрудники для окна регистрации (см. StaffSource.USE_MOCK)
+    private val staff: DirectoryRepository =
+        if (StaffSource.USE_MOCK) MockDirectoryRepository()
+        else ServerDirectoryRepository(api = { api }, token = { accessToken })
+
+    /** Оборудование выбранного цеха. В режиме заглушки не фильтруем: id цехов заглушки не совпадают с серверными. */
+    val visibleEquipment: List<EquipmentDto>
+        get() = if (StaffSource.USE_MOCK || userState.workshopId == 0) equipment
+        else equipment.filter { it.workshopId == userState.workshopId }
+
     fun login(address: String, login: String, password: String) {
         if (isLoggingIn) return
         val normalized = try {
@@ -71,7 +88,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             return
         }
         serverUrl = normalized
-        api = ApiClient.create(normalized)
+        api = ApiClient.create(normalized, getApplication())
         tokenStore.clear()
         prefs.edit().putString("server_url", normalized).remove("access_token").apply()
         authenticate { client ->
@@ -91,7 +108,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             loginError = null
             try {
                 val (token, user) = load(api)
-                userState = user.toUserState()
+                userState = withActing(user.toUserState())
                 accessToken = token
                 refreshEquipment()
             } catch (e: LoginException) {
@@ -117,6 +134,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         accessToken = null
         tokenStore.clear()
         prefs.edit().remove("access_token").apply()
+        clearActing()
         userState = UserState()
         equipment = emptyList()
         card = null
@@ -209,6 +227,144 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun consumeEvent() { event = null }
 
+    // ---------- Смена цеха / должности / ФИО после входа ----------
+    // Логин и пароль вводятся один раз. Дальше сотрудник просто выбирает: цех -> должность -> Ф.И.О.
+
+    var registration by mutableStateOf(RegistrationUi())
+        private set
+
+    private var roleCodes: Map<String, String> = emptyMap() // «Мастер» -> значение для запроса к серверу
+    private var loadToken = 0
+    private var retryAction: (() -> Unit)? = null
+
+    fun openRegistration() {
+        registration = RegistrationUi()
+        loadWorkshops()
+    }
+
+    fun onWorkshopSelected(workshop: Workshop) {
+        roleCodes = emptyMap()
+        registration = registration.copy(
+            selectedWorkshop = workshop,
+            roles = emptyList(), selectedRole = null,
+            employees = emptyList(), selectedEmployee = null
+        )
+        loadRoles(workshop.id)
+    }
+
+    fun onRoleSelected(title: String) {
+        val workshop = registration.selectedWorkshop ?: return
+        registration = registration.copy(
+            selectedRole = title,
+            employees = emptyList(), selectedEmployee = null
+        )
+        loadEmployees(workshop.id, roleCodes[title] ?: title)
+    }
+
+    fun onEmployeeSelected(employee: Employee) {
+        registration = registration.copy(selectedEmployee = employee)
+    }
+
+    fun retryLoad() {
+        retryAction?.invoke()
+    }
+
+    fun confirmRegistration() {
+        val workshop = registration.selectedWorkshop ?: return
+        val employee = registration.selectedEmployee ?: return
+        userState = userState.copy(
+            employeeId = employee.id,
+            employeeName = employee.name,
+            role = roleTitle(employee.role),
+            workshopId = workshop.id,
+            workshop = workshop.name
+        )
+        saveActing()
+        event = "Теперь работает: ${employee.name}"
+    }
+
+    private fun loadWorkshops() {
+        retryAction = { loadWorkshops() }
+        loadStaff {
+            staff.getWorkshops()
+                .onSuccess { registration = registration.copy(workshops = it) }
+                .onFailure { showStaffError(it) }
+        }
+    }
+
+    private fun loadRoles(workshopId: Int) {
+        retryAction = { loadRoles(workshopId) }
+        loadStaff {
+            staff.getRoles(workshopId)
+                .onSuccess { codes ->
+                    val byTitle = codes.associateBy { roleTitle(it) }
+                    roleCodes = byTitle
+                    registration = registration.copy(roles = byTitle.keys.toList())
+                }
+                .onFailure { showStaffError(it) }
+        }
+    }
+
+    private fun loadEmployees(workshopId: Int, role: String) {
+        retryAction = { loadEmployees(workshopId, role) }
+        loadStaff {
+            staff.getEmployees(workshopId, role)
+                .onSuccess { registration = registration.copy(employees = it) }
+                .onFailure { showStaffError(it) }
+        }
+    }
+
+    private fun showStaffError(e: Throwable) {
+        val text = when {
+            e is HttpException && e.code() == 404 ->
+                "На сервере ещё нет этого списка (нужны workshops/{id}/roles и workshops/{id}/employees)"
+            e is HttpException && e.code() == 401 -> "Сессия истекла. Выйдите и войдите снова"
+            e is HttpException -> "Сервер вернул ошибку ${e.code()}"
+            else -> "Не удалось загрузить список. Проверьте связь с сервером"
+        }
+        registration = registration.copy(error = text)
+    }
+
+    // token защищает индикатор загрузки от «устаревших» запросов при быстрой смене выбора
+    private fun loadStaff(block: suspend () -> Unit) {
+        val token = ++loadToken
+        registration = registration.copy(isLoading = true, error = null)
+        viewModelScope.launch {
+            block()
+            if (token == loadToken) registration = registration.copy(isLoading = false)
+        }
+    }
+
+    // Выбор запоминается: после перезапуска приложения цех/должность/ФИО остаются прежними
+    private fun saveActing() {
+        prefs.edit()
+            .putString("acting_login", userState.login)
+            .putInt("acting_id", userState.employeeId)
+            .putString("acting_name", userState.employeeName)
+            .putString("acting_role", userState.role)
+            .putInt("acting_workshop_id", userState.workshopId)
+            .putString("acting_workshop", userState.workshop)
+            .apply()
+    }
+
+    private fun clearActing() {
+        prefs.edit().remove("acting_login").remove("acting_id").remove("acting_name")
+            .remove("acting_role").remove("acting_workshop_id").remove("acting_workshop").apply()
+    }
+
+    private fun withActing(base: UserState): UserState {
+        if (prefs.getString("acting_login", null) != base.login) return base
+        val id = prefs.getInt("acting_id", 0)
+        if (id == 0) return base
+        return base.copy(
+            employeeId = id,
+            employeeName = prefs.getString("acting_name", null) ?: base.employeeName,
+            role = prefs.getString("acting_role", null) ?: base.role,
+            workshopId = prefs.getInt("acting_workshop_id", base.workshopId),
+            workshop = prefs.getString("acting_workshop", null) ?: base.workshop
+        )
+    }
+
     private fun AccountDto.toUserState() = UserState(
         login = login,
         employeeId = id, employeeName = fullName, workshopId = workshopId ?: 0,
@@ -248,3 +404,4 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         restoreSession()
     }
 }
+

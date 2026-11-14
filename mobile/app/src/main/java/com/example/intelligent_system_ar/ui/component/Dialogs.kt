@@ -68,16 +68,15 @@ fun RegistrationDialog(
     onEmployeeSelected: (Employee) -> Unit,
     onRetry: () -> Unit,
     onConfirm: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier // Добавили modifier для единого стиля
 ) {
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(20.dp),
             color = Color.Transparent,
             border = null,
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.55f)
+            modifier = modifier // Применяем единый фон
         ) {
             Column(
                 modifier = Modifier
@@ -164,7 +163,6 @@ fun RegistrationDialog(
         }
     }
 }
-
 
 @Composable
 private fun DropdownField(

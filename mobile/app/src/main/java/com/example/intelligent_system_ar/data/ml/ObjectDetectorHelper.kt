@@ -8,7 +8,6 @@ import android.graphics.Paint
 import android.graphics.Rect
 import org.tensorflow.lite.DataType
 import org.tensorflow.lite.Interpreter
-import org.tensorflow.lite.support.common.FileUtil
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.security.MessageDigest
@@ -25,23 +24,25 @@ class ObjectDetectorHelper(context: Context) : AutoCloseable {
     private val output = arrayOf(Array(17) { FloatArray(8400) })
 
     init {
-        val hash = MessageDigest.getInstance("SHA-256")
-        context.assets.open("best_float16.tflite").use { stream ->
-            val buffer = ByteArray(8192)
-            while (true) { val count = stream.read(buffer); if (count < 0) break; hash.update(buffer, 0, count) }
-        }
-        val actual = hash.digest().joinToString("") { "%02x".format(it.toInt() and 255) }
+        // Читаем файл модели целиком. Так работает и со сжатым ассетом (FileUtil.loadMappedFile в этом
+        // случае падает с «file is probably compressed»), и не нужна библиотека tensorflow-lite-support.
+        val modelBytes = context.assets.open("best_float16.tflite").use { it.readBytes() }
+        val actual = MessageDigest.getInstance("SHA-256").digest(modelBytes)
+            .joinToString("") { "%02x".format(it.toInt() and 255) }
         require(actual == MODEL_SHA256) { "Файл модели не соответствует проверенному контракту" }
         require(labels.size == 12 && labels[5] == "Без коррозии") { "Неверный список меток" }
-        val model = FileUtil.loadMappedFile(context, "best_float16.tflite")
+        val model = ByteBuffer.allocateDirect(modelBytes.size).order(ByteOrder.nativeOrder()).apply {
+            put(modelBytes)
+            rewind()
+        }
         interpreter = Interpreter(model, Interpreter.Options().apply {
             setNumThreads(minOf(4, Runtime.getRuntime().availableProcessors()))
         })
         try {
             require(interpreter.getInputTensor(0).shape().contentEquals(intArrayOf(1,640,640,3)) &&
-                interpreter.getInputTensor(0).dataType() == DataType.FLOAT32)
+                    interpreter.getInputTensor(0).dataType() == DataType.FLOAT32)
             require(interpreter.getOutputTensor(0).shape().contentEquals(intArrayOf(1,17,8400)) &&
-                interpreter.getOutputTensor(0).dataType() == DataType.FLOAT32)
+                    interpreter.getOutputTensor(0).dataType() == DataType.FLOAT32)
         } catch (error: RuntimeException) { interpreter.close(); throw error }
     }
 
@@ -64,7 +65,8 @@ class ObjectDetectorHelper(context: Context) : AutoCloseable {
 
     override fun close() { interpreter.close(); bitmap.recycle() }
 
+    // SSH МОДЕЛИ
     companion object {
-        const val MODEL_SHA256 = "0c6ce9b3990dcfd9607a3bab073c66a42d4db882ae111676960dd59e6cf7b774"
+        const val MODEL_SHA256 = "fbbdb8b77278c5d64eeedd80a43e85637f476f438f352861a622863a709de65b"
     }
 }

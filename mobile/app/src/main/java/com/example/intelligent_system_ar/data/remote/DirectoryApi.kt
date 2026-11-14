@@ -10,6 +10,15 @@ interface DirectoryApi : AuthApi {
     @GET("workshops")
     suspend fun workshops(@Header("Authorization") token: String): List<NamedDto>
 
+    /** Должности выбранного цеха. Ответ: ["MASTER","WORKER"] или ["Мастер","Рабочий"]. */
+    @GET("workshops/{id}/roles")
+    suspend fun roles(@Header("Authorization") token: String, @Path("id") workshopId: Int): List<String>
+
+    /** Сотрудники выбранного цеха с выбранной должностью (role — ровно то значение, что вернул roles). */
+    @GET("workshops/{id}/employees")
+    suspend fun employees(@Header("Authorization") token: String, @Path("id") workshopId: Int,
+                          @Query("role") role: String): List<EmployeeDto>
+
     @GET("equipment")
     suspend fun getEquipment(@Header("Authorization") token: String): List<EquipmentDto>
 

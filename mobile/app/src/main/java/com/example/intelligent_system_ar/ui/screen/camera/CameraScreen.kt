@@ -17,7 +17,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import com.example.intelligent_system_ar.ui.MainViewModel
+import com.example.intelligent_system_ar.ui.component.ConfirmChangeDialog
 import com.example.intelligent_system_ar.ui.component.EquipmentDialog
+import com.example.intelligent_system_ar.ui.component.RegistrationDialog
 import com.example.intelligent_system_ar.ui.component.MainTopBar
 import com.example.intelligent_system_ar.ui.screen.login.LoginScreen
 import com.example.intelligent_system_ar.ui.theme.*
@@ -36,6 +38,8 @@ fun CameraScreen(viewModel: MainViewModel) {
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { permissionGranted=it }
     LaunchedEffect(Unit) { if (!permissionGranted) permission.launch(Manifest.permission.CAMERA) }
     var showEquipment by remember { mutableStateOf(false) }
+    var showConfirmChange by remember { mutableStateOf(false) }
+    var showRegistration by remember { mutableStateOf(false) }
     var analyzing by remember { mutableStateOf(true) }
     var status by remember { mutableStateOf(LiveCameraStatus()) }
 
@@ -54,8 +58,10 @@ fun CameraScreen(viewModel: MainViewModel) {
                 Button(onClick={permission.launch(Manifest.permission.CAMERA)}) { Text("Разрешить камеру") }
             }
         }
-        MainTopBar(user=viewModel.userState, onRegisterClick={},
-            onChangeDataClick={viewModel.logout()}, modifier=Modifier.align(Alignment.TopCenter))
+        MainTopBar(user=viewModel.userState,
+            onRegisterClick={ viewModel.openRegistration(); showRegistration=true },
+            onChangeDataClick={ showConfirmChange=true },
+            modifier=Modifier.align(Alignment.TopCenter))
         Surface(modifier=Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
             color=ArSurface.copy(alpha=0.95f)) {
             Column(Modifier.navigationBarsPadding().padding(16.dp), verticalArrangement=Arrangement.spacedBy(8.dp)) {
@@ -72,8 +78,37 @@ fun CameraScreen(viewModel: MainViewModel) {
                     OutlinedButton(onClick={showEquipment=true},modifier=Modifier.weight(1f)) { Text("Оборудование") }
                 }
                 viewModel.card?.let { Text(it.name,color=ArTextPrimary,style=MaterialTheme.typography.bodySmall) }
+                // Выход из аккаунта (смена логина). Не нужна — удалите эту строку.
+                TextButton(onClick={ viewModel.logout() }) { Text("Выйти из аккаунта", color=ArTextSecondary) }
             }
         }
     }
     if (showEquipment) EquipmentDialog(viewModel,onDismiss={showEquipment=false})
+    if (showConfirmChange) {
+        ConfirmChangeDialog(
+            user = viewModel.userState,
+            onConfirm = {
+                showConfirmChange = false
+                viewModel.openRegistration()
+                showRegistration = true
+            },
+            onDismiss = { showConfirmChange = false }
+        )
+    }
+    if (showRegistration) {
+        RegistrationDialog(
+            state = viewModel.registration,
+            onWorkshopSelected = viewModel::onWorkshopSelected,
+            onRoleSelected = viewModel::onRoleSelected,
+            onEmployeeSelected = viewModel::onEmployeeSelected,
+            onRetry = viewModel::retryLoad,
+            onConfirm = {
+                viewModel.confirmRegistration()
+                showRegistration = false
+            },
+            onDismiss = { showRegistration = false },
+            // ЕДИНЫЙ СТИЛЬ (РАМКУ И РАЗМЕР)
+            modifier = Modifier.fillMaxWidth().fillMaxHeight(0.55f)
+        )
+    }
 }
