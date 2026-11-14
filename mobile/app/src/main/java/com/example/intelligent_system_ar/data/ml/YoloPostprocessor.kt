@@ -25,23 +25,36 @@ data class LetterboxGeometry(val width: Int, val height: Int, val size: Int = 64
 object YoloPostprocessor {
     const val THRESHOLD = 0.4f
     fun decode(output: Array<FloatArray>, labels: List<String>, geometry: LetterboxGeometry): List<Detection> {
-        require(output.size == 17 && labels.size == 12) { "Неподдерживаемый контракт модели" }
+        // ИЗМЕНЕНИЕ 1: Проверяем, что тензор теперь имеет размер 20 (4 координаты + 16 классов),
+        // а меток ровно 16.
+        require(output.size == 20 && labels.size == 16) { "Неподдерживаемый контракт модели" }
+
         val count = output[0].size
         require(output.all { it.size == count })
         val candidates = mutableListOf<Detection>()
+
         for (i in 0 until count) {
             var classId = -1
             var confidence = 0f
-            for (c in 0 until 13) {
+
+            // ИЗМЕНЕНИЕ 2: Перебираем 16 классов вместо 13.
+            for (c in 0 until 16) {
                 val score = output[4 + c][i]
-                if (score.isFinite() && score > confidence) { confidence = score; classId = c }
+                if (score.isFinite() && score > confidence) {
+                    confidence = score
+                    classId = c
+                }
             }
+
+            // Класс 5 — это "Без коррозии", его не выводим как дефект
             if (confidence <= THRESHOLD || confidence > 1f || classId == 5 || classId < 0) continue
+
             val box = geometry.restore(output[0][i], output[1][i], output[2][i], output[3][i]) ?: continue
             val known = classId < labels.size
             candidates += Detection(classId, labels.getOrElse(classId) { "Неизвестный класс $classId" },
                 confidence, if (known) FindingKind.DEFECT else FindingKind.UNKNOWN, box)
         }
+
         val kept = mutableListOf<Detection>()
         for (candidate in candidates.sortedByDescending { it.confidence }) {
             if (kept.none { it.classId == candidate.classId && iou(it.box, candidate.box) > 0.45f }) kept += candidate
@@ -52,7 +65,7 @@ object YoloPostprocessor {
 
     private fun iou(a: DetectionBox, b: DetectionBox): Float {
         val intersection = max(0f, min(a.right, b.right) - max(a.left, b.left)) *
-            max(0f, min(a.bottom, b.bottom) - max(a.top, b.top))
+                max(0f, min(a.bottom, b.bottom) - max(a.top, b.top))
         val union = (a.right-a.left)*(a.bottom-a.top) + (b.right-b.left)*(b.bottom-b.top) - intersection
         return if (union > 0) intersection / union else 0f
     }
